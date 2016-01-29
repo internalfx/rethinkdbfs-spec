@@ -1,10 +1,12 @@
 ===========
-GridFS Spec
+RethinkDBFS Spec
 ===========
 
+Adapted from the original GridFS spec for MongoDB
+
 :Spec: 105
-:Title: GridFS Spec
-:Authors: Samantha Ritter and Robert Stam
+:Title: RethinkDBFS Spec
+:Authors: Bryan Morris
 :Advisors: David Golden and Jeff Yemin
 :Status: Approved
 :Type: Standards
