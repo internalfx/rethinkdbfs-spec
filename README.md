@@ -2,7 +2,8 @@
 
 Copied and adapted from the original [GridFS spec](https://github.com/mongodb/specifications) for MongoDB
 
-- Authors **Bryan Morris**
+- Authors **Bryan Morris**, **Brian Chavez**
+- Advisors **Daniel Mewes**
 
 # Abstract
 
