@@ -108,16 +108,8 @@ A non-exhaustive list of acceptable deviations are as follows:
 - Using named parameters instead of an options hash. For instance,
 
 ```javascript
-var id = bucket.upload_from_stream(filename, source, {chunkSizeBytes: 16 * 1024})
+var stream = bucket.createWriteStream(filename, meta, {chunkSizeBytes: 16 * 1024})
 ```
-
-- Using a fluent style for constructing a RethinkDBFSBucket instance:
-
-```javascript
-var bucket = new RethinkDBFSBucket(database).withReadPreference(ReadPreference.Secondary)
-```
-
-When using a fluent-style builder, all options should be named rather than inventing a new word to include in the pipeline (like options). Required parameters are still required to be on the initiating constructor.
 
 #### Naming
 
