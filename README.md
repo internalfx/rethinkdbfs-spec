@@ -13,16 +13,16 @@ RethinkDBFS is a convention drivers use to store and retrieve JSON binary data t
 
 # Definitions
 
-# META
+## META
 
 The keywords “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).
 
-# Terms
+## Terms
 
-### Bucket name
+#### Bucket name
 A prefix under which a RethinkDBFS system’s tables are stored. Collection names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
 
-### Chunk
+#### Chunk
 A section of a user file, stored as a single document in the ‘chunks’ collection of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
 
 ```javascript
@@ -41,16 +41,16 @@ A section of a user file, stored as a single document in the ‘chunks’ collec
 | n | the index number of this chunk, zero-based |
 | data | a chunk of data from the user file |
 
-### Chunks collection
+#### Chunks collection
 A collection in which chunks of a user file are stored. The name for this collection is the word 'chunks' prefixed by the bucket name. The default is ‘fs.chunks’.
 
-### Empty chunk
+#### Empty chunk
 A chunk with a zero length “data” field.
 
-### Files collection
+#### Files collection
 A collection in which information about stored files is stored. There will be one files collection document per stored file. The name for this collection is the word ‘files’ prefixed by the bucket name. The default is ‘fs.files’.
 
-### Files collection document
+#### Files table document
 A document stored in the files collection that contains information about a single stored file. Files collection documents have the following form:
 
 ```javascript
