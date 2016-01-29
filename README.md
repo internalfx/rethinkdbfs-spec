@@ -209,38 +209,20 @@ Drivers MUST wait for the index to finish building before writing.
 
 ```javascript
 
-class RethinkDBFSUploadOptions {
+var uploadOptions = {
 
   /**
    * The number of bytes per chunk of this file. Defaults to the
    * chunkSizeBytes in the RethinkDBFSBucketOptions.
    */
-  chunkSizeBytes : Int32 optional;
+  chunkSizeBytes: Number optional;
 
   /**
    * User data for the 'metadata' field of the files table document.
    * If not provided the driver MUST omit the metadata field from the
    * files table document.
    */
-  metadata : Document optional;
-
-  /**
-   * DEPRECATED: A valid MIME type. If not provided the driver MUST omit the
-   * contentType field from the files table document.
-   *
-   * Applications wishing to store a contentType should add a contentType field
-   * to the metadata document instead.
-   */
-  contentType : String optional;
-
-  /**
-   * DEPRECATED: An array of aliases. If not provided the driver MUST omit the
-   * aliases field from the files table document.
-   *
-   * Applications wishing to store aliases should add an aliases field to the
-   * metadata document instead.
-   */
-  aliases: String[] optional;
+  metadata : Object optional;
 
 }
 
@@ -251,18 +233,7 @@ class RethinkDBFSBucket {
    *
    * Returns a Stream to which the application will write the contents.
    */
-  Stream open_upload_stream(string filename, RethinkDBFSUploadOptions options=null);
-
-  /**
-   * Uploads a user file to a RethinkDBFS bucket.
-   *
-   * Reads the contents of the user file from the @source Stream and uploads it
-   * as chunks in the chunks table. After all the chunks have been uploaded,
-   * it creates a files table document for @filename in the files table.
-   *
-   * Returns the id of the uploaded file.
-   */
-  ObjectId upload_from_stream(string filename, Stream source, RethinkDBFSUploadOptions options=null);
+  Stream createWriteStream(string filename, uploadOptions=null);
 
 }
 ```
@@ -372,7 +343,7 @@ class RethinkDBFSBucket {
    * Given a @id, delete this stored file’s files table document and
    * associated chunks from a RethinkDBFS bucket.
    */
-  void delete(ObjectId id);
+  void delete(id);
 
 }
 ```
@@ -397,28 +368,17 @@ class RethinkDBFSFindOptions {
   /**
    * The number of documents to return per batch.
    */
-  batchSize : Int32 optional;
+  batchSize : Number optional;
 
   /**
    * The maximum number of documents to return.
    */
-  limit : Int32 optional;
-
-  /**
-   * The maximum amount of time to allow the query to run.
-   */
-  maxTimeMS: Int64 optional;
-
-  /**
-   * The server normally times out idle cursors after an inactivity period (10 minutes)
-   * to prevent excess memory use. Set this option to prevent that.
-   */
-  noCursorTimeout : Boolean optional;
+  limit : Number optional;
 
   /**
    * The number of documents to skip before returning.
    */
-  skip : Int32;
+  skip : Number optional;
 
   /**
    * The order by which to sort results. Defaults to not sorting.
@@ -432,7 +392,7 @@ class RethinkDBFSBucket {
   /**
    * Find and return the files table documents that match @filter.
    */
-  Iterable find(Document filter, RethinkDBFSFindOptions options=null);
+  Iterable find(Document filter, RethinkDBFSFindOptions=null);
 
 }
 ```
@@ -464,7 +424,7 @@ class RethinkDBFSDownloadByNameOptions {
    * -2 = the second most recent revision
    * -1 = the most recent revision
    */
-  revision : Int32 optional;
+  revision : Number optional;
 
 }
 
@@ -475,14 +435,7 @@ class RethinkDBFSBucket {
    *
    * Returns a Stream.
    */
-  Stream open_download_stream_by_name(string filename, RethinkDBFSDownloadByNameOptions options=null);
-
-  /**
-   * Downloads the contents of the stored file specified by @filename and by the
-   * revision in @options and writes the contents to the @destination Stream.
-   */
-  void download_to_stream_by_name(string filename, Stream destination,
-    RethinkDBFSDownloadByNameOptions options=null);
+  Stream createReadStream(string filename, RethinkDBFSDownloadByNameOptions=null);
 
 }
 ```
@@ -515,7 +468,7 @@ class RethinkDBFSBucket {
   /**
    * Renames the stored file with the specified @id.
    */
-  void rename(ObjectId id, string new_filename);
+  void rename(id, string new_filename);
 
 }
 ```
