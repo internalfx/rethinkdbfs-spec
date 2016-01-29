@@ -69,7 +69,7 @@ A document stored in the files collection that contains information about a sing
   "length" : <Integer>,
   "chunkSize" : <Int32>,
   "uploadDate" : <DateTime>,
-  "md5" : <hex string>,
+  "sha256" : <hex string>,
   "filename" : <string>,
   "metadata" : <Document>
 }
@@ -81,7 +81,7 @@ A document stored in the files collection that contains information about a sing
 | length | the length of this stored file, in bytes. |
 | chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB. |
 | uploadDate | the date and time this file was added to RethinkDBFS, stored as a JSON datetime value. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
-| md5 | a hash of the contents of the stored file. |
+| sha256 | a hash of the contents of the stored file. |
 | filename | the name of this stored file; this does not need to be unique. |
 | metadata | any additional application data the user wishes to store. |
 | Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files collection document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files collection documents that might have additional fields. |
