@@ -186,7 +186,7 @@ For read operations, drivers MUST assume that the proper indexes exist.
 
 Immediately before the **first** write operation on an instance of a RethinkDBFSBucket class is attempted (and not earlier), drivers MUST:
 
-- determine if the files table is empty using the primary read preference mode.
+- determine if the files table is empty.
 - and if so, create the indexes described above if they do not already exist
 
 To determine whether the files table is empty drivers SHOULD execute the equivalent of the following shell command:
