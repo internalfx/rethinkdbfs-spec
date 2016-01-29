@@ -375,7 +375,7 @@ abstraction, drivers SHOULD use that Stream abstraction. For languages
 that do not have a Stream abstraction, drivers MUST create an
 abstraction that supports streaming.
 
-In the case of open_upload_stream, the driver returns a Stream to which the
+In the case of `open_upload_stream`, the driver returns a Stream to which the
 application will write the contents of the file. As the application writes the
 contents to the returned Stream, the contents are uploaded as chunks in the chunks
 collection. When the application signals it is done writing the contents of the
@@ -389,24 +389,24 @@ a driver SHOULD make the Id available as a property named Id on the
 Stream that is returned. In languages where that is not idiomatic, a driver
 MUST make the Id available in a way that is appropriate for that language.
 
-In the case of upload_from_stream, the driver reads the contents of
+In the case of `upload_from_stream`, the driver reads the contents of
 the user file by consuming the the source Stream until end of file is
 reached. The driver does NOT close the source Stream.
 
-Drivers MUST take an ‘options’ document with configurable parameters.
+Drivers MUST take an `options` document with configurable parameters.
 Drivers for dynamic languages MUST ignore any unrecognized fields in the options
 for this method (this does not apply to drivers for static languages which
 define an Options class that by definition only contains valid fields).
 
-Note that in RethinkDBFS, ‘filename’ is not a unique identifier. There may be
+Note that in RethinkDBFS, `filename` is not a unique identifier. There may be
 many stored files with the same filename stored in a RethinkDBFS bucket under
 different ids. Multiple stored files with the same filename are called
-'revisions', and the 'uploadDate' is used to distinguish newer revisions
+`revisions`, and the `uploadDate` is used to distinguish newer revisions
 from older ones.
 
-**Implementation details:**
+#### Implementation details:
 
-If ‘chunkSizeBytes’ is set through the options, that value MUST be used
+If `chunkSizeBytes` is set through the options, that value MUST be used
 as the chunk size for this stored file. If this parameter is not
 specified, the default chunkSizeBytes setting for this RethinkDBFSBucket
 object MUST be used instead.
@@ -414,18 +414,17 @@ object MUST be used instead.
 To store a user file, drivers first generate an ObjectId to act as its
 id. Then, drivers store the contents of the user file in the chunks
 collection by breaking up the contents into chunks of size
-‘chunkSizeBytes’. For a non-empty user file, for each n\ :sup:`th`
+`chunkSizeBytes`. For a non-empty user file, for each Nth
 section of the file, drivers create a chunk document and set its fields
 as follows:
 
-:files_id: the id generated for this stored file.
-:n: this is the n\ :sup:`th` section of the stored file, zero based.
-:data: a section of file data, stored as BSON binary data with subtype 0x00. All chunks except
-  the last one must be exactly 'chunkSizeBytes' long. The last chunk can be smaller,
-  and should only be as large as necessary.
+|Key|Description|
+|---|---|
+|files_id|the id generated for this stored file.|
+|n|this is the Nth section of the stored file, zero based.|
+|data|a section of file data, stored as JSON binary data with subtype. All chunks except the last one must be exactly `chunkSizeBytes` long. The last chunk can be smaller, and should only be as large as necessary.|
 
-While streaming the user file, drivers compute an MD5 digest. This MD5
-digest will later be stored in the files collection document.
+While streaming the user file, drivers compute an MD5 digest. This MD5 digest will later be stored in the files collection document.
 
 After storing all chunk documents generated for the user file in the
 ‘chunks’ collection, drivers create a files collection document for the
