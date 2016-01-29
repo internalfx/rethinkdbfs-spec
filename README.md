@@ -124,32 +124,30 @@ A non-exhaustive list of acceptable deviations are as follows:
 
 - Using named parameters instead of an options hash. For instance,
 
-  .. code:: javascript
-
-    id = bucket.upload_from_stream(filename, source, chunkSizeBytes: 16 * 1024);
+```javascript
+var id = bucket.upload_from_stream(filename, source, chunkSizeBytes: 16 * 1024);
+```
 
 - Using a fluent style for constructing a RethinkDBFSBucket instance:
 
-  .. code:: javascript
-
-    bucket = new RethinkDBFSBucket(database)
-      .withReadPreference(ReadPreference.Secondary);
+```javascript
+var bucket = new RethinkDBFSBucket(database)
+  .withReadPreference(ReadPreference.Secondary);
+```
 
 When using a fluent-style builder, all options should be named
 rather than inventing a new word to include in the pipeline (like
 options). Required parameters are still required to be on the
 initiating constructor.
 
-Naming
-------
+### Naming
 
 All drivers MUST name operations, objects, and parameters as defined in
 the following sections.
 
 Deviations are permitted as outlined below.
 
-Deviations
-~~~~~~~~~~
+### Deviations
 
 When deviating from a defined name, an author should consider if the
 altered name is recognizable and discoverable to the user of another
@@ -157,80 +155,77 @@ driver.
 
 A non-exhaustive list of acceptable naming deviations are as follows:
 
-- Using "bucketName" as an example, Java would use "bucketName" while
-  Python would use "bucket_name". However, calling it
-  "bucketPrefix" would not be acceptable.
+- Using `bucketName` as an example, Java would use `bucketName` while
+  Python would use `bucket_name`. However, calling it
+  `bucketPrefix` would not be acceptable.
 
-- Using "maxTimeMS" as an example, .NET would use "MaxTime" where its
+- Using `maxTimeMS` as an example, .NET would use `MaxTime` where its
   type is a TimeSpan structure that includes units. However,
-  calling it "MaximumTime" would not be acceptable.
+  calling it `MaximumTime` would not be acceptable.
 
-- Using "RethinkDBFSUploadOptions" as an example, Javascript wouldn't need
+- Using `RethinkDBFSUploadOptions` as an example, Javascript wouldn't need
   to name it while other drivers might prefer to call it
-  "RethinkDBFSUploadArgs" or "RethinkDBFSUploadParams". However, calling it
-  "UploadOptions" would not be acceptable.
+  `RethinkDBFSUploadArgs` or `RethinkDBFSUploadParams`. However, calling it
+  `UploadOptions` would not be acceptable.
 
-- Languages that use a different word than "Stream" to represent a
-  streamed I/O abstraction may replace the word "Stream" with their
-  language's equivalent word. For example, open_upload_stream might
-  be called open_upload_file or open_upload_writer if appropriate.
+- Languages that use a different word than `Stream` to represent a
+  streamed I/O abstraction may replace the word `Stream` with their
+  language's equivalent word. For example, `open_upload_stream` might
+  be called `open_upload_file` or `open_upload_writer` if appropriate.
 
 - Languages that support overloading MAY shorten the name of some
-  methods as appropriate. For example, download_to_stream and
-  download_to_stream_by_name MAY be overloaded
-  download_to_stream methods with different parameter types.
+  methods as appropriate. For example, `download_to_stream` and
+  `download_to_stream_by_name` MAY be overloaded
+  `download_to_stream` methods with different parameter types.
   Implementers are encouraged not to shorten method names
   unnecessarily, because even if the shorter names are not
   ambiguous today they might become ambiguous in the future as new
   features are added.
 
-API
-===
+# API
 
 This section presents two groups of features, a basic API that a driver
 MUST implement, and a more advanced API that drivers MAY choose to
 implement additionally.
 
-Basic API
-=========
+## Basic API
 
 Configurable RethinkDBFSBucket class
--------------------------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSBucketOptions {
 
-  class RethinkDBFSBucketOptions {
+  /**
+   * The bucket name. Defaults to 'fs'.
+   */
+  bucketName : String optional;
 
-    /**
-     * The bucket name. Defaults to 'fs'.
-     */
-    bucketName : String optional;
+  /**
+   * The chunk size in bytes. Defaults to 255KB.
+   */
+  chunkSizeBytes : Int32 optional;
 
-    /**
-     * The chunk size in bytes. Defaults to 255KB.
-     */
-    chunkSizeBytes : Int32 optional;
+  /**
+   * The write concern. Defaults to the write concern of the database.
+   */
+  writeConcern : WriteConcern optional;
 
-    /**
-     * The write concern. Defaults to the write concern of the database.
-     */
-    writeConcern : WriteConcern optional;
+  /**
+   * The read preference. Defaults to the read preference of the database.
+   */
+  readPreference : ReadPreference optional;
 
-    /**
-     * The read preference. Defaults to the read preference of the database.
-     */
-    readPreference : ReadPreference optional;
+}
 
-  }
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /**
+   * Create a new RethinkDBFSBucket object on @db with the given @options.
+   */
+  RethinkDBFSBucket new(Database db, RethinkDBFSBucketOptions options=null);
 
-    /**
-     * Create a new RethinkDBFSBucket object on @db with the given @options.
-     */
-    RethinkDBFSBucket new(Database db, RethinkDBFSBucketOptions options=null);
-
-  }
+}
+```
 
 Creates a new RethinkDBFSBucket object, managing a RethinkDBFS bucket within the
 given database.
@@ -266,8 +261,7 @@ changed after the instance has been created. If your driver provides a
 fluent way to provide new values for properties, these fluent methods
 MUST return new instances of RethinkDBFSBucket.
 
-Indexes
--------
+## Indexes
 
 For efficient execution of various RethinkDBFS operations the following
 indexes MUST exist:
@@ -281,13 +275,11 @@ fit, but because RethinkDBFS is likely to be looked at as a black box we
 should create these indexes automatically in a way that involves the
 least amount of overhead possible.
 
-Before read operations
-~~~~~~~~~~~~~~~~~~~~~~
+### Before read operations
 
 For read operations, drivers MUST assume that the proper indexes exist.
 
-Before write operations
-~~~~~~~~~~~~~~~~~~~~~~~
+### Before write operations
 
 Immediately before the **first** write operation on an instance of a RethinkDBFSBucket
 class is attempted (and not earlier), drivers MUST:
@@ -298,9 +290,9 @@ class is attempted (and not earlier), drivers MUST:
 To determine whether the files collection is empty drivers SHOULD execute
 the equivalent of the following shell command:
 
-.. code :: javascript
-
-    > db.fs.files.findOne({}, { _id : 1 })
+```javascript
+  db.fs.files.findOne({}, { _id : 1 })
+```
 
 If no document is returned the files collection is empty.
 
@@ -315,67 +307,67 @@ if the attempt to create the indexes fails.
 
 Drivers MUST create the indexes in foreground mode.
 
-File Upload
------------
+# File Upload
 
-.. code:: javascript
+```javascript
 
-  class RethinkDBFSUploadOptions {
+class RethinkDBFSUploadOptions {
 
-    /**
-     * The number of bytes per chunk of this file. Defaults to the
-     * chunkSizeBytes in the RethinkDBFSBucketOptions.
-     */
-    chunkSizeBytes : Int32 optional;
+  /**
+   * The number of bytes per chunk of this file. Defaults to the
+   * chunkSizeBytes in the RethinkDBFSBucketOptions.
+   */
+  chunkSizeBytes : Int32 optional;
 
-    /**
-     * User data for the 'metadata' field of the files collection document.
-     * If not provided the driver MUST omit the metadata field from the
-     * files collection document.
-     */
-    metadata : Document optional;
+  /**
+   * User data for the 'metadata' field of the files collection document.
+   * If not provided the driver MUST omit the metadata field from the
+   * files collection document.
+   */
+  metadata : Document optional;
 
-    /**
-     * DEPRECATED: A valid MIME type. If not provided the driver MUST omit the
-     * contentType field from the files collection document.
-     *
-     * Applications wishing to store a contentType should add a contentType field
-     * to the metadata document instead.
-     */
-    contentType : String optional;
+  /**
+   * DEPRECATED: A valid MIME type. If not provided the driver MUST omit the
+   * contentType field from the files collection document.
+   *
+   * Applications wishing to store a contentType should add a contentType field
+   * to the metadata document instead.
+   */
+  contentType : String optional;
 
-    /**
-     * DEPRECATED: An array of aliases. If not provided the driver MUST omit the
-     * aliases field from the files collection document.
-     *
-     * Applications wishing to store aliases should add an aliases field to the
-     * metadata document instead.
-     */
-    aliases: String[] optional;
+  /**
+   * DEPRECATED: An array of aliases. If not provided the driver MUST omit the
+   * aliases field from the files collection document.
+   *
+   * Applications wishing to store aliases should add an aliases field to the
+   * metadata document instead.
+   */
+  aliases: String[] optional;
 
-  }
+}
 
-  class RethinkDBFSBucket {
+class RethinkDBFSBucket {
 
-    /**
-     * Opens a Stream that the application can write the contents of the file to.
-     *
-     * Returns a Stream to which the application will write the contents.
-     */
-    Stream open_upload_stream(string filename, RethinkDBFSUploadOptions options=null);
+  /**
+   * Opens a Stream that the application can write the contents of the file to.
+   *
+   * Returns a Stream to which the application will write the contents.
+   */
+  Stream open_upload_stream(string filename, RethinkDBFSUploadOptions options=null);
 
-    /**
-     * Uploads a user file to a RethinkDBFS bucket.
-     *
-     * Reads the contents of the user file from the @source Stream and uploads it
-     * as chunks in the chunks collection. After all the chunks have been uploaded,
-     * it creates a files collection document for @filename in the files collection.
-     *
-     * Returns the id of the uploaded file.
-     */
-    ObjectId upload_from_stream(string filename, Stream source, RethinkDBFSUploadOptions options=null);
+  /**
+   * Uploads a user file to a RethinkDBFS bucket.
+   *
+   * Reads the contents of the user file from the @source Stream and uploads it
+   * as chunks in the chunks collection. After all the chunks have been uploaded,
+   * it creates a files collection document for @filename in the files collection.
+   *
+   * Returns the id of the uploaded file.
+   */
+  ObjectId upload_from_stream(string filename, Stream source, RethinkDBFSUploadOptions options=null);
 
-  }
+}
+```
 
 Uploads a user file to a RethinkDBFS bucket. For languages that have a Stream
 abstraction, drivers SHOULD use that Stream abstraction. For languages
@@ -495,24 +487,24 @@ after Abort has been called fail immediately.
 File Download
 -------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /** Opens a Stream from which the application can read the contents of the stored file
+   * specified by @id.
+   *
+   * Returns a Stream.
+   */
+  Stream open_download_stream(ObjectId id);
 
-    /** Opens a Stream from which the application can read the contents of the stored file
-     * specified by @id.
-     *
-     * Returns a Stream.
-     */
-    Stream open_download_stream(ObjectId id);
+  /**
+   * Downloads the contents of the stored file specified by @id and writes
+   * the contents to the @destination Stream.
+   */
+  void download_to_stream(ObjectId id, Stream destination);
 
-    /**
-     * Downloads the contents of the stored file specified by @id and writes
-     * the contents to the @destination Stream.
-     */
-    void download_to_stream(ObjectId id, Stream destination);
-
-  }
+}
+```
 
 Downloads a stored file from a RethinkDBFS bucket. For languages that have a
 Stream abstraction, drivers SHOULD use that Stream abstraction. For
@@ -562,17 +554,17 @@ detected by the driver.
 File Deletion
 -------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /**
+   * Given a @id, delete this stored file’s files collection document and
+   * associated chunks from a RethinkDBFS bucket.
+   */
+  void delete(ObjectId id);
 
-    /**
-     * Given a @id, delete this stored file’s files collection document and
-     * associated chunks from a RethinkDBFS bucket.
-     */
-    void delete(ObjectId id);
-
-  }
+}
+```
 
 Deletes the stored file’s files collection document and associated
 chunks from the underlying database.
@@ -604,51 +596,51 @@ If a networking or server error occurs, drivers MUST raise an error.
 Generic Find on Files Collection
 --------------------------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSFindOptions {
 
-  class RethinkDBFSFindOptions {
+  /**
+   * The number of documents to return per batch.
+   */
+  batchSize : Int32 optional;
 
-    /**
-     * The number of documents to return per batch.
-     */
-    batchSize : Int32 optional;
+  /**
+   * The maximum number of documents to return.
+   */
+  limit : Int32 optional;
 
-    /**
-     * The maximum number of documents to return.
-     */
-    limit : Int32 optional;
+  /**
+   * The maximum amount of time to allow the query to run.
+   */
+  maxTimeMS: Int64 optional;
 
-    /**
-     * The maximum amount of time to allow the query to run.
-     */
-    maxTimeMS: Int64 optional;
+  /**
+   * The server normally times out idle cursors after an inactivity period (10 minutes)
+   * to prevent excess memory use. Set this option to prevent that.
+   */
+  noCursorTimeout : Boolean optional;
 
-    /**
-     * The server normally times out idle cursors after an inactivity period (10 minutes)
-     * to prevent excess memory use. Set this option to prevent that.
-     */
-    noCursorTimeout : Boolean optional;
+  /**
+   * The number of documents to skip before returning.
+   */
+  skip : Int32;
 
-    /**
-     * The number of documents to skip before returning.
-     */
-    skip : Int32;
+  /**
+   * The order by which to sort results. Defaults to not sorting.
+   */
+  sort : Document optional;
 
-    /**
-     * The order by which to sort results. Defaults to not sorting.
-     */
-    sort : Document optional;
+}
 
-  }
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /**
+   * Find and return the files collection documents that match @filter.
+   */
+  Iterable find(Document filter, RethinkDBFSFindOptions options=null);
 
-    /**
-     * Find and return the files collection documents that match @filter.
-     */
-    Iterable find(Document filter, RethinkDBFSFindOptions options=null);
-
-  }
+}
+```
 
 This call will trigger a find() operation on the files collection using
 the given filter. Drivers returns a sequence of documents that can be
@@ -673,43 +665,43 @@ Advanced API
 File Download by Filename
 -------------------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSDownloadByNameOptions {
 
-  class RethinkDBFSDownloadByNameOptions {
+  /**
+   * Which revision (documents with the same filename and different uploadDate)
+   * of the file to retrieve. Defaults to -1 (the most recent revision).
+   *
+   * Revision numbers are defined as follows:
+   * 0 = the original stored file
+   * 1 = the first revision
+   * 2 = the second revision
+   * etc…
+   * -2 = the second most recent revision
+   * -1 = the most recent revision
+   */
+  revision : Int32 optional;
 
-    /**
-     * Which revision (documents with the same filename and different uploadDate)
-     * of the file to retrieve. Defaults to -1 (the most recent revision).
-     *
-     * Revision numbers are defined as follows:
-     * 0 = the original stored file
-     * 1 = the first revision
-     * 2 = the second revision
-     * etc…
-     * -2 = the second most recent revision
-     * -1 = the most recent revision
-     */
-    revision : Int32 optional;
+}
 
-  }
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /** Opens a Stream from which the application can read the contents of the stored file
+   * specified by @filename and the revision in @options.
+   *
+   * Returns a Stream.
+   */
+  Stream open_download_stream_by_name(string filename, RethinkDBFSDownloadByNameOptions options=null);
 
-    /** Opens a Stream from which the application can read the contents of the stored file
-     * specified by @filename and the revision in @options.
-     *
-     * Returns a Stream.
-     */
-    Stream open_download_stream_by_name(string filename, RethinkDBFSDownloadByNameOptions options=null);
+  /**
+   * Downloads the contents of the stored file specified by @filename and by the
+   * revision in @options and writes the contents to the @destination Stream.
+   */
+  void download_to_stream_by_name(string filename, Stream destination,
+    RethinkDBFSDownloadByNameOptions options=null);
 
-    /**
-     * Downloads the contents of the stored file specified by @filename and by the
-     * revision in @options and writes the contents to the @destination Stream.
-     */
-    void download_to_stream_by_name(string filename, Stream destination,
-      RethinkDBFSDownloadByNameOptions options=null);
-
-  }
+}
+```
 
 Retrieves a stored file from a RethinkDBFS bucket. For languages that have a
 Stream abstraction, drivers SHOULD use that Stream abstraction. For
@@ -764,16 +756,16 @@ unneeded documents from the ‘chunks’ collection.
 Renaming stored files
 ---------------------
 
-.. code:: javascript
+```javascript
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /**
+   * Renames the stored file with the specified @id.
+   */
+  void rename(ObjectId id, string new_filename);
 
-    /**
-     * Renames the stored file with the specified @id.
-     */
-    void rename(ObjectId id, string new_filename);
-
-  }
+}
+```
 
 Sets the filename field in the stored file’s files collection document
 to the new filename.
@@ -781,29 +773,28 @@ to the new filename.
 **Implementation details:**
 
 Drivers construct and execute an update_one command on the files
-collection using { _id: @id } as the filter and { $set : { filename :
-"new_filename" } } as the update parameter.
+collection using `{ _id: @id }` as the filter and `{ $set : { filename :
+"new_filename" } }` as the update parameter.
 
 To rename multiple revisions of the same filename, users must retrieve
 the full list of files collection documents for a given filename and
-execute “rename” on each corresponding “_id”.
+execute `rename` on each corresponding `_id`.
 
 If there is no file with the given id, drivers MUST raise an error.
 
-Dropping an entire RethinkDBFS bucket
---------------------------------
+### Dropping an entire RethinkDBFS bucket
 
-.. code:: javascript
+```javascript
+class RethinkDBFSBucket {
 
-  class RethinkDBFSBucket {
+  /**
+   * Drops the files and chunks collections associated with
+   * this bucket.
+   */
+  void drop();
 
-    /**
-     * Drops the files and chunks collections associated with
-     * this bucket.
-     */
-    void drop();
-
-  }
+}
+```
 
 This method drops the files and chunks collections associated with this
 RethinkDBFS bucket.
@@ -811,215 +802,146 @@ RethinkDBFS bucket.
 Drivers should drop the files collection first, and then the chunks
 collection.
 
-Test Plan
-=========
+# Motivation for Change
 
-TBD
+RethinkDBFS documentation is only concerned with the underlying data model for this feature, and does not specify what basic set of features an implementation of RethinkDBFS should or should not provide. As a result, RethinkDBFS is currently implemented across drivers, but with varying APIs, features, and behavior guarantees. Current implementations also may not conform to the existing documentation.
 
-Motivation for Change
-=====================
+This spec documents minimal operations required by all drivers offering RethinkDBFS support, along with optional features that drivers may choose to support. This spec is also explicit about what features/behaviors of RethinkDBFS are not specified and should not be supported. Additionally, this spec validates and clarifies the existing data model, deprecating fields that are undesirable or incorrect.
 
-The `existing RethinkDBFS documentation <http://docs.mongodb.org/manual/reference/RethinkDBFS/>`__ is
-only concerned with the underlying data model for this feature, and does
-not specify what basic set of features an implementation of RethinkDBFS
-should or should not provide. As a result, RethinkDBFS is currently
-implemented across drivers, but with varying APIs, features, and
-behavior guarantees. Current implementations also may not conform to the
-existing documentation.
+# Design Rationale
 
-This spec documents minimal operations required by all drivers offering
-RethinkDBFS support, along with optional features that drivers may choose to
-support. This spec is also explicit about what features/behaviors of
-RethinkDBFS are not specified and should not be supported. Additionally, this
-spec validates and clarifies the existing data model, deprecating fields
-that are undesirable or incorrect.
+#### Why is the default chunk size 255KB?
+On MMAPv1, the server provides documents with extra padding to allow for
+in-place updates. When the ‘data’ field of a chunk is limited to 255KB,
+it ensures that the whole chunk document (the chunk data along with an
+id and other information) will fit into a 256KB section of memory,
+making the best use of the provided padding. Users setting custom chunk
+sizes are advised not to use round power-of-two values, as the whole
+chunk document is likely to exceed that space and demand extra padding
+from the system. WiredTiger handles its memory differently, and this
+optimization does not apply. However, because application code generally
+won’t know what storage engine will be used in the database, always
+avoiding round power-of-two chunk sizes is recommended.
 
-Design Rationale
-================
+#### Why can’t I alter documents once they are in the system?
+RethinkDBFS works with documents stored in multiple collections within
+MongoDB. Because there is currently no way to atomically perform
+operations across collections in MongoDB, there is no way to alter
+stored files in a way that prevents race conditions between RethinkDBFS
+clients. Updating RethinkDBFS stored files without that server functionality
+would involve a data model that could support this type of concurrency,
+and changing the RethinkDBFS data model is outside of the scope of this spec.
 
-Why is the default chunk size 255KB?
-  On MMAPv1, the server provides documents with extra padding to allow for
-  in-place updates. When the ‘data’ field of a chunk is limited to 255KB,
-  it ensures that the whole chunk document (the chunk data along with an
-  _id and other information) will fit into a 256KB section of memory,
-  making the best use of the provided padding. Users setting custom chunk
-  sizes are advised not to use round power-of-two values, as the whole
-  chunk document is likely to exceed that space and demand extra padding
-  from the system. WiredTiger handles its memory differently, and this
-  optimization does not apply. However, because application code generally
-  won’t know what storage engine will be used in the database, always
-  avoiding round power-of-two chunk sizes is recommended.
+#### Why provide a ‘rename’ method?
+By providing users with a reasonable alternative for renaming a file, we
+can discourage users from writing directly to the files collections
+under RethinkDBFS. With this approach we can prevent critical files
+collection documents fields from being mistakenly altered.
 
-Why can’t I alter documents once they are in the system?
-  RethinkDBFS works with documents stored in multiple collections within
-  MongoDB. Because there is currently no way to atomically perform
-  operations across collections in MongoDB, there is no way to alter
-  stored files in a way that prevents race conditions between RethinkDBFS
-  clients. Updating RethinkDBFS stored files without that server functionality
-  would involve a data model that could support this type of concurrency,
-  and changing the RethinkDBFS data model is outside of the scope of this spec.
+#### Why is there no way to perform arbitrary updates on the files collection?
+The rename helper defined in this spec allows users to easily rename a
+stored file. While updating files collection documents in other, more
+granular ways might be helpful for some users, validating such updates
+to ensure that other files collection document fields remain protected
+is a complicated task. We leave the decision of how best to provide this
+functionality to a future spec.
 
-Why provide a ‘rename’ method?
-  By providing users with a reasonable alternative for renaming a file, we
-  can discourage users from writing directly to the files collections
-  under RethinkDBFS. With this approach we can prevent critical files
-  collection documents fields from being mistakenly altered.
+#### What is the ‘md5’ field of a files collection document and how is it used?
+‘md5’ holds an MD5 checksum that is computed from the original contents
+of a user file. Historically, RethinkDBFS did not use acknowledged writes, so
+this checksum was necessary to ensure that writes went through properly.
+With acknowledged writes, the MD5 checksum is still useful to ensure
+that files in RethinkDBFS have not been corrupted. A third party directly
+accessing the 'files' and ‘chunks’ collections under RethinkDBFS could,
+inadvertently or maliciously, make changes to documents that would make
+them unusable by RethinkDBFS. Comparing the MD5 in the files collection
+document to a re-computed MD5 allows detecting such errors and
+corruption. However, drivers now assume that the stored file is not
+corrupted, and applications that want to use the MD5 value to check for
+corruption must do so themselves.
 
-Why is there no way to perform arbitrary updates on the files collection?
-  The rename helper defined in this spec allows users to easily rename a
-  stored file. While updating files collection documents in other, more
-  granular ways might be helpful for some users, validating such updates
-  to ensure that other files collection document fields remain protected
-  is a complicated task. We leave the decision of how best to provide this
-  functionality to a future spec.
+#### Why store the MD5 checksum instead of creating the hash as-needed?
+The MD5 checksum must be computed when a file is initially uploaded to
+RethinkDBFS, as this is the only time we are guaranteed to have the entire
+uncorrupted file. Computing it on-the-fly as a file is read from RethinkDBFS
+would ensure that our reads were successful, but guarantees nothing
+about the state of the file in the system. A successful check against
+the stored MD5 checksum guarantees that the stored file matches the
+original and no corruption has occurred.
 
-What is the ‘md5’ field of a files collection document and how is it used?
-  ‘md5’ holds an MD5 checksum that is computed from the original contents
-  of a user file. Historically, RethinkDBFS did not use acknowledged writes, so
-  this checksum was necessary to ensure that writes went through properly.
-  With acknowledged writes, the MD5 checksum is still useful to ensure
-  that files in RethinkDBFS have not been corrupted. A third party directly
-  accessing the 'files' and ‘chunks’ collections under RethinkDBFS could,
-  inadvertently or maliciously, make changes to documents that would make
-  them unusable by RethinkDBFS. Comparing the MD5 in the files collection
-  document to a re-computed MD5 allows detecting such errors and
-  corruption. However, drivers now assume that the stored file is not
-  corrupted, and applications that want to use the MD5 value to check for
-  corruption must do so themselves.
+#### Why do drivers no longer need to call the filemd5 command on upload?
+When a chunk is inserted and no error occurs the application can assume
+that the chunk was correctly inserted. No other operations that insert
+or modify data require the driver to double check that the operation
+succeeded. It can be assumed that any errors would have been detected by
+use of the appropriate write concern.
 
-Why store the MD5 checksum instead of creating the hash as-needed?
-  The MD5 checksum must be computed when a file is initially uploaded to
-  RethinkDBFS, as this is the only time we are guaranteed to have the entire
-  uncorrupted file. Computing it on-the-fly as a file is read from RethinkDBFS
-  would ensure that our reads were successful, but guarantees nothing
-  about the state of the file in the system. A successful check against
-  the stored MD5 checksum guarantees that the stored file matches the
-  original and no corruption has occurred.
+#### What about write concern?
+This spec leaves the choice of how to set write concern to driver
+authors. Implementers may choose to accept write concern through options
+on the given methods, to set a configurable write concern on the RethinkDBFS
+object, to enforce a single write concern for all RethinkDBFS operations, or
+to do something different.
 
-Why do drivers no longer need to call the filemd5 command on upload?
-  When a chunk is inserted and no error occurs the application can assume
-  that the chunk was correctly inserted. No other operations that insert
-  or modify data require the driver to double check that the operation
-  succeeded. It can be assumed that any errors would have been detected by
-  use of the appropriate write concern.
+#### If a user has given RethinkDBFS a write concern of 0, should we perform MD5 calculations?
+Yes, because the checksum is used for detecting future corruption or
+misuse of RethinkDBFS collections.
 
-What about write concern?
-  This spec leaves the choice of how to set write concern to driver
-  authors. Implementers may choose to accept write concern through options
-  on the given methods, to set a configurable write concern on the RethinkDBFS
-  object, to enforce a single write concern for all RethinkDBFS operations, or
-  to do something different.
+#### Is RethinkDBFS limited by sharded systems?
+For best performance, clients using RethinkDBFS on a sharded system should
+use a shard key that ensures all chunks for a given stored file are
+routed to the same shard. Therefore, if the chunks collection is
+sharded, you should shard on the files_id. Normally only the chunks
+collection benefits from sharding, since the files collection is usually
+small. Otherwise, there are no limitations to RethinkDBFS on sharded systems.
 
-If a user has given RethinkDBFS a write concern of 0, should we perform MD5 calculations?
-  Yes, because the checksum is used for detecting future corruption or
-  misuse of RethinkDBFS collections.
+#### Why is contentType deprecated?
+Most fields in the files collection document are directly used by the
+driver, with the exception of: metadata, contentType and aliases. All
+information that is purely for use of the application should be embedded
+in the 'metadata' document. Users of RethinkDBFS who would like to store a
+contentType for use in their applications are encouraged to add a
+'contentType' field to the ‘metadata’ document instead of using the
+deprecated top-level ‘contentType’ field.
 
-Is RethinkDBFS limited by sharded systems?
-  For best performance, clients using RethinkDBFS on a sharded system should
-  use a shard key that ensures all chunks for a given stored file are
-  routed to the same shard. Therefore, if the chunks collection is
-  sharded, you should shard on the files_id. Normally only the chunks
-  collection benefits from sharding, since the files collection is usually
-  small. Otherwise, there are no limitations to RethinkDBFS on sharded systems.
+#### Why are aliases deprecated?
+The ‘aliases’ field of the files collection documents was misleading. It
+implies that a file in RethinkDBFS could be accessed by alternate names when,
+in fact, none of the existing implementations offer this functionality.
+For RethinkDBFS implementations that retrieve stored files by filename or
+support specifying specific revisions of a stored file, it is unclear
+how ‘aliases’ should be interpreted. Users of RethinkDBFS who would like to
+store alternate filenames for use in their applications are encouraged
+to add an ‘aliases’ field to the ‘metadata’ document instead of using
+the deprecated top-level ‘aliases’ field.
 
-Why is contentType deprecated?
-  Most fields in the files collection document are directly used by the
-  driver, with the exception of: metadata, contentType and aliases. All
-  information that is purely for use of the application should be embedded
-  in the 'metadata' document. Users of RethinkDBFS who would like to store a
-  contentType for use in their applications are encouraged to add a
-  'contentType' field to the ‘metadata’ document instead of using the
-  deprecated top-level ‘contentType’ field.
+#### What happened to the put and get methods from earlier drafts?
+Upload and download are more idiomatic names that more clearly indicate
+their purpose. Get and put are often associated with getting and setting
+properties of a class, and using them instead of download and upload was
+confusing.
 
-Why are aliases deprecated?
-  The ‘aliases’ field of the files collection documents was misleading. It
-  implies that a file in RethinkDBFS could be accessed by alternate names when,
-  in fact, none of the existing implementations offer this functionality.
-  For RethinkDBFS implementations that retrieve stored files by filename or
-  support specifying specific revisions of a stored file, it is unclear
-  how ‘aliases’ should be interpreted. Users of RethinkDBFS who would like to
-  store alternate filenames for use in their applications are encouraged
-  to add an ‘aliases’ field to the ‘metadata’ document instead of using
-  the deprecated top-level ‘aliases’ field.
+#### Why aren't there methods to upload and download byte arrays?
+We assume that RethinkDBFS files are usually quite large and therefore that
+the RethinkDBFS API must support streaming. Most languages have easy ways to
+wrap a stream around a byte array. Drivers are free to add helper
+methods that directly support uploading and downloading RethinkDBFS files as
+byte arrays.
 
-What happened to the put and get methods from earlier drafts?
-  Upload and download are more idiomatic names that more clearly indicate
-  their purpose. Get and put are often associated with getting and setting
-  properties of a class, and using them instead of download and upload was
-  confusing.
-
-Why aren't there methods to upload and download byte arrays?
-  We assume that RethinkDBFS files are usually quite large and therefore that
-  the RethinkDBFS API must support streaming. Most languages have easy ways to
-  wrap a stream around a byte array. Drivers are free to add helper
-  methods that directly support uploading and downloading RethinkDBFS files as
-  byte arrays.
-
-Should drivers report an error if a stored file has extra chunks?
-  The length and the chunkSize fields of the files collection document
-  together imply exactly how many chunks a stored file should have. If the
-  chunks collection has any extra chunks the stored file is in an
-  inconsistent state. Ideally we would like to report that as an error,
-  but this is an extremely unlikely state and we don't want to pay a
-  performance penalty checking for an error that is almost never there.
-  Therefore, drivers MAY ignore extra chunks.
-
-Backwards Compatibility
-=======================
-
-This spec presents a new API for RethinkDBFS systems, which may break
-existing functionality for some drivers. The following are suggestions
-for ways to mitigate these incompatibilities.
-
-File revisions
-  This document presents a basic API that does not support specifying
-  specific revisions of a stored file, and an advanced API that does.
-  Drivers MAY choose to implement whichever API is closest to the
-  functionality they now support. Note that the methods for file insertion
-  are the same whether specifying specific revisions is supported or not.
-
-Method names
-  If drivers provide methods that conform to the functionality outlined in
-  this document, drivers MAY continue to provide those methods under their
-  existing names. In this case, drivers SHOULD make it clear in their
-  documentation that these methods have equivalents defined in the spec
-  under a different name.
-
-ContentType field
-  Drivers MAY continue to create a ‘contentType'’ field within files
-  collection documents, so that applications depending on this field
-  continue to work. However, drivers SHOULD make it clear in their
-  documentation that this field is deprecated, and is not used at all in
-  driver code. Documentation SHOULD encourage users to store contentType
-  in the ‘metadata’ document instead.
-
-Aliases field
-  Drivers MAY continue to create an ‘aliases’ field within files
-  collection documents, so that applications depending on this field
-  continue to work. However, drivers SHOULD make it clear in their
-  documentation that this field is deprecated, and is not used at all in
-  driver code. Documentation SHOULD encourage users to store aliases in
-  the ‘metadata’ document instead.
-
-Reference Implementation
-========================
-
-TBD
+#### Should drivers report an error if a stored file has extra chunks?
+The length and the chunkSize fields of the files collection document
+together imply exactly how many chunks a stored file should have. If the
+chunks collection has any extra chunks the stored file is in an
+inconsistent state. Ideally we would like to report that as an error,
+but this is an extremely unlikely state and we don't want to pay a
+performance penalty checking for an error that is almost never there.
+Therefore, drivers MAY ignore extra chunks.
 
 Future work
 ===========
-
-Changes to the RethinkDBFS data model are out-of-scope for this spec, but may
-be considered for the future.
 
 The ability to alter or append to existing RethinkDBFS files has been cited
 as something that would greatly improve the system. While this
 functionality is not in-scope for this spec (see ‘Why can’t I alter
 documents once they are in the system?’) it is a potential area of
 growth for the future.
-
-It has also been suggested that the MD5 hashing performed on stored
-files be updated to use a more secure algorithm, like SHA-1 or SHA-256.
-
-Changes
-=======
