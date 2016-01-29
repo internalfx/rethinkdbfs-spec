@@ -209,7 +209,7 @@ This method of determining whether the files table is empty should perform bette
 
 Drivers MUST check whether the indexes already exist before attempting to create them. This supports the scenario where an application is running with read-only authorizations.
 
-If a driver determines that it should create the indexes, it  MUST raise an error if the attempt to create the indexes fails.
+If a driver determines that it should create the indexes, it MUST raise an error if the attempt to create the indexes fails.
 
 Drivers MUST create the indexes in foreground mode.
 
