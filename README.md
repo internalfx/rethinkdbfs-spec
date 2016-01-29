@@ -211,7 +211,7 @@ Drivers MUST check whether the indexes already exist before attempting to create
 
 If a driver determines that it should create the indexes, it MUST raise an error if the attempt to create the indexes fails.
 
-Drivers MUST create the indexes in foreground mode.
+Drivers MUST wait for the index to finish building before writing.
 
 # File Upload
 
