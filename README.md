@@ -208,11 +208,16 @@ For efficient execution of various RethinkDBFS operations the following indexes 
 
 An index on the `files` table:
 
-`r.db(<dbName>).table('<bucketName>_files').createIndex('<indexName>', [r.row('filename'), r.row('uploadDate)])`
+```
+r.db(<dbName>).table('<bucketName>_files')
+              .createIndex('<indexName>', [r.row('filename'), r.row('uploadDate)])
+```
 
 An index on the `chunks` table:
 
-`r.db(<dbName>).table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n)])`
+```
+r.db(<dbName>).table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n)])
+```
 
 Normally we leave it up to the user to create whatever indexes they see fit, but because RethinkDBFS is likely to be looked at as a black box we should create these indexes automatically in a way that involves the least amount of overhead possible.
 
