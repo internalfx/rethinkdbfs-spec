@@ -71,7 +71,7 @@ A document stored in the files table that contains information about a single st
 | length | the length of this stored file, in bytes. |
 | chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
 | uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
-| sha256 | a hash of the contents of the stored file. |
+| sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | metadata | any additional application data the user wishes to store. |
 
