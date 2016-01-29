@@ -20,48 +20,48 @@ The keywords “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL N
 ## Terms
 
 #### Bucket name
-A prefix under which a RethinkDBFS system’s tables are stored. Table names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
+A prefix under which a RethinkDBFS system’s tables are stored. Table names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is `fs`.
 
 #### Chunk
-A section of a user file, stored as a single document in the ‘chunks’ table of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
+A section of a user file, stored as a single document in the `chunks` table of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
 
-```javascript
+```json
 {
-  "id": <Id>,
-  "files_id": <Id>,
-  "n": <Integer>,
-  "data": <binary data>
+  "id": "<String>",
+  "files_id": "<String>",
+  "n": "<Number>",
+  "data": "<Binary>"
 }
 ```
 
 | Key | Description |
 |---|---|
-| id | a unique ID for this document of type BSON ObjectId |
+| id | a unique ID for this document. |
 | files_id | the id for this file (the id from the files table document). |
 | n | the index number of this chunk, zero-based |
 | data | a chunk of data from the user file |
 
 #### Chunks table
-A table in which chunks of a user file are stored. The name for this table is the word 'chunks' prefixed by the bucket name. The default is ‘fs.chunks’.
+A table in which chunks of a user file are stored. The name for this table is the word 'chunks' prefixed by the bucket name. The default is `fs_chunks`.
 
 #### Empty chunk
-A chunk with a zero length “data” field.
+A chunk with a zero length `data` field.
 
 #### Files table
-A table in which information about stored files is stored. There will be one files table document per stored file. The name for this table is the word ‘files’ prefixed by the bucket name. The default is ‘fs.files’.
+A table in which information about stored files is stored. There will be one files table document per stored file. The name for this table is the word `files` prefixed by the bucket name. The default is `fs_files`.
 
 #### Files table document
 A document stored in the files table that contains information about a single stored file. Files table documents have the following form:
 
-```javascript
+```json
 {
-  "id" : <Id>,
-  "length" : <Integer>,
-  "chunkSize" : <Int32>,
-  "uploadDate" : <DateTime>,
-  "sha256" : <hex string>,
-  "filename" : <string>,
-  "metadata" : <Document>
+  "id" : "<String>",
+  "length" : "<Number>",
+  "chunkSize" : "<Number>",
+  "uploadDate" : "<Time>",
+  "sha256" : "<String>",
+  "filename" : "<String>",
+  "metadata" : "<Object>"
 }
 ```
 
@@ -69,12 +69,11 @@ A document stored in the files table that contains information about a single st
 |---|---|
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
-| chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB. |
-| uploadDate | the date and time this file was added to RethinkDBFS, stored as a JSON datetime value. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
+| uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
 | sha256 | a hash of the contents of the stored file. |
 | filename | the name of this stored file; this does not need to be unique. |
 | metadata | any additional application data the user wishes to store. |
-| Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files table document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files table documents that might have additional fields. |
 
 #### Orphaned chunk
 A document in the chunks tables for which the `files_id` does not match any `id` in the files table. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
@@ -109,14 +108,13 @@ A non-exhaustive list of acceptable deviations are as follows:
 - Using named parameters instead of an options hash. For instance,
 
 ```javascript
-var id = bucket.upload_from_stream(filename, source, chunkSizeBytes: 16 * 1024);
+var id = bucket.upload_from_stream(filename, source, {chunkSizeBytes: 16 * 1024})
 ```
 
 - Using a fluent style for constructing a RethinkDBFSBucket instance:
 
 ```javascript
-var bucket = new RethinkDBFSBucket(database)
-  .withReadPreference(ReadPreference.Secondary);
+var bucket = new RethinkDBFSBucket(database).withReadPreference(ReadPreference.Secondary)
 ```
 
 When using a fluent-style builder, all options should be named rather than inventing a new word to include in the pipeline (like options). Required parameters are still required to be on the initiating constructor.
@@ -135,7 +133,7 @@ A non-exhaustive list of acceptable naming deviations are as follows:
 
 - Using `bucketName` as an example, Java would use `bucketName` while Python would use `bucket_name`. However, calling it `bucketPrefix` would not be acceptable.
 
-- Using `maxTimeMS` as an example, .NET would use `MaxTime` where its type is a TimeSpan structure that includes units. However, calling it `MaximumTime` would not be acceptable.
+- Using `maxTimeMS` as an example, .NET would use `MaxTime` where its type is a `TimeSpan` structure that includes units. However, calling it `MaximumTime` would not be acceptable.
 
 - Using `RethinkDBFSUploadOptions` as an example, Javascript wouldn't need to name it while other drivers might prefer to call it `RethinkDBFSUploadArgs` or `RethinkDBFSUploadParams`. However, calling it `UploadOptions` would not be acceptable.
 
