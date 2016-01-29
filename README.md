@@ -343,7 +343,7 @@ After storing all chunk documents generated for the user file in the `chunks` ta
 |length|the length of this stored file, in bytes.|
 |chunkSize|the chunk size in bytes used to break the user file into chunks. While the configuration option is named ‘chunkSizeBytes’ for clarity, for legacy reasons, the files table document uses only ‘chunkSize’.|
 |uploadDate|a BSON datetime object for the current time, in UTC, when the files table document was created.|
-|sha256|SHA256 checksum for this user file, computed from the file’s data, stored as a hex string.|
+|sha256|SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase).|
 |filename|the filename passed to this function, UTF-8 encoded.|
 |metadata|the `metadata` document passed in the options, if provided; otherwise omitted.|
 
