@@ -76,16 +76,16 @@ A document stored in the files table that contains information about a single st
 | metadata | any additional application data the user wishes to store. |
 | Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files table document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files table documents that might have additional fields. |
 
-### Orphaned chunk
+#### Orphaned chunk
 A document in the chunks tables for which the `files_id` does not match any `id` in the files table. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
 
-### Stored File
+#### Stored File
 A user file that has been stored in RethinkDBFS, consisting of a files table document in the files table and zero or more documents in the chunks table.
 
-### Stream
+#### Stream
 An abstraction that represents streamed I/O. In some languages a different word is used to represent this abstraction.
 
-### User File
+#### User File
 A data added by a user to RethinkDBFS. This data may map to an actual file on disk, a stream of input, a large data object, or any other large amount of consecutive data.
 
 # Specification
@@ -121,13 +121,13 @@ var bucket = new RethinkDBFSBucket(database)
 
 When using a fluent-style builder, all options should be named rather than inventing a new word to include in the pipeline (like options). Required parameters are still required to be on the initiating constructor.
 
-### Naming
+#### Naming
 
 All drivers MUST name operations, objects, and parameters as defined in the following sections.
 
 Deviations are permitted as outlined below.
 
-### Deviations
+#### Deviations
 
 When deviating from a defined name, an author should consider if the altered name is recognizable and discoverable to the user of another driver.
 
@@ -216,11 +216,11 @@ An index on the `chunks` table:
 
 Normally we leave it up to the user to create whatever indexes they see fit, but because RethinkDBFS is likely to be looked at as a black box we should create these indexes automatically in a way that involves the least amount of overhead possible.
 
-### Before read operations
+#### Before read operations
 
 For read operations, drivers MUST assume that the proper indexes exist.
 
-### Before write operations
+#### Before write operations
 
 Immediately before the **first** write operation on an instance of a RethinkDBFSBucket class is attempted (and not earlier), drivers MUST:
 
@@ -352,7 +352,7 @@ If any of the above operations fail against the server, drivers MUST raise an er
 
 #### Aborting an upload
 
-Drivers SHOULD provide a mechanism to abort an upload. When using open_upload_stream, the returned Stream SHOULD have an Abort method. When using upload_from_stream, the upload will be aborted if the source stream raises an error.
+Drivers SHOULD provide a mechanism to abort an upload. When using `open_upload_stream`, the returned Stream SHOULD have an Abort method. When using `upload_from_stream`, the upload will be aborted if the source stream raises an error.
 
 When an upload is aborted any chunks already uploaded MUST be deleted. Note that this differs from the case where an attempt to insert a chunk fails, in which case drivers immediately report the failure without attempting to delete any chunks already uploaded.
 
@@ -383,9 +383,9 @@ class RethinkDBFSBucket {
 
 Downloads a stored file from a RethinkDBFS bucket. For languages that have a Stream abstraction, drivers SHOULD use that Stream abstraction. For languages that do not have a Stream abstraction, drivers MUST create an abstraction that supports streaming.
 
-In the case of open_download_stream, the application reads the contents of the stored file by reading from the returned Stream until end of file is reached. The application MUST call close (or its equivalent) on the returned Stream when it is done reading the contents.
+In the case of `open_download_stream`, the application reads the contents of the stored file by reading from the returned Stream until end of file is reached. The application MUST call close (or its equivalent) on the returned Stream when it is done reading the contents.
 
-In the case of download_to_stream the driver writes the contents of the stored file to the provided Stream. The driver does NOT call close (or its equivalent) on the Stream.
+In the case of `download_to_stream` the driver writes the contents of the stored file to the provided Stream. The driver does NOT call close (or its equivalent) on the Stream.
 
 Note: if a file in a RethinkDBFS bucket was added by a legacy implementation, its id may be of a type other than ObjectId. Drivers that previously used id’s of a different type MAY implement a download() method that accepts that type, but MUST mark that method as deprecated.
 
