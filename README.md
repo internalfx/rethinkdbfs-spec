@@ -150,43 +150,21 @@ This section presents two groups of features, a basic API that a driver MUST imp
 Configurable RethinkDBFSBucket class
 
 ```javascript
-class RethinkDBFSBucketOptions {
-
-  /**
-   * The bucket name. Defaults to 'fs'.
-   */
-  bucketName : String optional;
-
-  /**
-   * The chunk size in bytes. Defaults to 255KB.
-   */
-  chunkSizeBytes : Int32 optional;
-
+var RethinkDBFSBucketOptions = {
+  bucketName: String optional; // The bucket name. Defaults to 'fs'.
+  chunkSizeBytes: Number optional; // The chunk size in bytes. Defaults to 255KB (1024 * 255).
 }
 
-class RethinkDBFSBucket {
-
-  /**
-   * Create a new RethinkDBFSBucket object on @db with the given @options.
-   */
-  RethinkDBFSBucket new(Database db, RethinkDBFSBucketOptions options=null);
-
-}
+var bucket = new RethinkDBFSBucket(dbConnectionOptions, RethinkDBFSBucketOptions)
 ```
 
 Creates a new RethinkDBFSBucket object, managing a RethinkDBFS bucket within the given database.
 
 RethinkDBFSBucket objects MUST allow the following options to be configurable:
 
-- **bucketName:** the name of this RethinkDBFS bucket. The files and chunks table for this RethinkDBFS bucket are prefixed by this name followed by an underscore. Defaults to “fs”. This allows multiple RethinkDBFS buckets, each with a unique name, to exist within the same database.
+- **bucketName:** the name of this RethinkDBFS bucket. The files and chunks table for this RethinkDBFS bucket are prefixed by this name followed by an underscore. Defaults to `fs`. This allows multiple RethinkDBFS buckets, each with a unique name, to exist within the same database.
 
-- **chunkSizeBytes:** the number of bytes stored in chunks for new user files added through this RethinkDBFSBucket object. This will not reformat existing files in the system that use a different chunk size. Defaults to 255KB.
-
-IF a driver supports configuring writeConcern or readPreference at the database or table level, then RethinkDBFSBucket objects MUST also allow the following options to be configurable:
-
-- **writeConcern:** defaults to the write concern on the parent database (or client object if the parent database has no write concern).
-
-- **readPreference:** defaults to the read preference on the parent database (or client object if the parent database has no read preference).
+- **chunkSizeBytes:** the number of bytes stored in chunks for new user files added through this RethinkDBFSBucket object. This will not reformat existing files in the system that use a different chunk size. Defaults to 255KB (1024 * 255).
 
 RethinkDBFSBucket instances are immutable. Their properties MUST NOT be changed after the instance has been created. If your driver provides a fluent way to provide new values for properties, these fluent methods MUST return new instances of RethinkDBFSBucket.
 
@@ -196,11 +174,15 @@ For efficient execution of various RethinkDBFS operations the following indexes 
 
 An index on the `files` table:
 
-`r.db(<dbName>).table('<bucketName>_files').createIndex('<indexName>', [r.row('filename'), r.row('uploadDate)])`
+```javascript
+r.table('<bucketName>_files').createIndex('<indexName>', [r.row('filename'), r.row('uploadDate')])
+```
 
 An index on the `chunks` table:
 
-`r.db(<dbName>).table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n)])`
+```javascript
+r.table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n')])
+```
 
 Normally we leave it up to the user to create whatever indexes they see fit, but because RethinkDBFS is likely to be looked at as a black box we should create these indexes automatically in a way that involves the least amount of overhead possible.
 
@@ -218,7 +200,7 @@ Immediately before the **first** write operation on an instance of a RethinkDBFS
 To determine whether the files table is empty drivers SHOULD execute the equivalent of the following shell command:
 
 ```javascript
-  db.fs.files.findOne({}, { _id : 1 })
+r.table('<bucketName>_files').limit(1)
 ```
 
 If no document is returned the files table is empty.
