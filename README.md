@@ -20,7 +20,7 @@ The keywords “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL N
 # Terms
 
 ### Bucket name
-A prefix under which a RethinkDBFS system’s collections are stored. Collection names for the files and chunks collections are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
+A prefix under which a RethinkDBFS system’s tables are stored. Collection names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
 
 ### Chunk
 A section of a user file, stored as a single document in the ‘chunks’ collection of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
@@ -77,7 +77,7 @@ A document stored in the files collection that contains information about a sing
 | Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files collection document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files collection documents that might have additional fields. |
 
 ### Orphaned chunk
-A document in the chunks collections for which the `files_id` does not match any `id` in the files collection. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
+A document in the chunks tables for which the `files_id` does not match any `id` in the files collection. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
 
 ### Stored File
 A user file that has been stored in RethinkDBFS, consisting of a files collection document in the files collection and zero or more documents in the chunks collection.
@@ -421,7 +421,7 @@ As noted for download(), drivers that previously used id’s of a different type
 
 #### Implementation details:
 
-There is an inherent race condition between the chunks and files collections. Without some transaction-like behavior between these two collections, it is always possible for one client to delete a stored file while another client is attempting a read of the stored file. For example, imagine client A retrieves a stored file’s files collection document, client B deletes the stored file, then client A attempts to read the stored file’s chunks. Client A wouldn’t find any chunks for the given stored file. To minimize the window of vulnerability of reading a stored file that is the process of being deleted, drivers MUST first delete the files collection document for a stored file, then delete its associated chunks.
+There is an inherent race condition between the chunks and files tables. Without some transaction-like behavior between these two tables, it is always possible for one client to delete a stored file while another client is attempting a read of the stored file. For example, imagine client A retrieves a stored file’s files collection document, client B deletes the stored file, then client A attempts to read the stored file’s chunks. Client A wouldn’t find any chunks for the given stored file. To minimize the window of vulnerability of reading a stored file that is the process of being deleted, drivers MUST first delete the files collection document for a stored file, then delete its associated chunks.
 
 If there is no such file listed in the files collection, drivers MUST raise an error. Drivers MAY attempt to delete any orphaned chunks with files_id equal to id before raising the error.
 
@@ -575,7 +575,7 @@ If there is no file with the given id, drivers MUST raise an error.
 class RethinkDBFSBucket {
 
   /**
-   * Drops the files and chunks collections associated with
+   * Drops the files and chunks tables associated with
    * this bucket.
    */
   void drop();
@@ -583,7 +583,7 @@ class RethinkDBFSBucket {
 }
 ```
 
-This method drops the files and chunks collections associated with this RethinkDBFS bucket.
+This method drops the files and chunks tables associated with this RethinkDBFS bucket.
 
 Drivers should drop the files collection first, and then the chunks collection.
 
@@ -599,31 +599,19 @@ This spec documents minimal operations required by all drivers offering RethinkD
 On MMAPv1, the server provides documents with extra padding to allow for in-place updates. When the ‘data’ field of a chunk is limited to 255KB, it ensures that the whole chunk document (the chunk data along with an id and other information) will fit into a 256KB section of memory, making the best use of the provided padding. Users setting custom chunk sizes are advised not to use round power-of-two values, as the whole chunk document is likely to exceed that space and demand extra padding from the system. WiredTiger handles its memory differently, and this optimization does not apply. However, because application code generally won’t know what storage engine will be used in the database, always avoiding round power-of-two chunk sizes is recommended.
 
 #### Why can’t I alter documents once they are in the system?
-RethinkDBFS works with documents stored in multiple collections within MongoDB. Because there is currently no way to atomically perform operations across collections in MongoDB, there is no way to alter stored files in a way that prevents race conditions between RethinkDBFS clients. Updating RethinkDBFS stored files without that server functionality would involve a data model that could support this type of concurrency, and changing the RethinkDBFS data model is outside of the scope of this spec.
+RethinkDBFS works with documents stored in multiple tables within RethinkDB. Because there is currently no way to atomically perform operations across tables in RethinkDB, there is no way to alter stored files in a way that prevents race conditions between RethinkDBFS clients. Updating RethinkDBFS stored files without that server functionality would involve a data model that could support this type of concurrency, and changing the RethinkDBFS data model is outside of the scope of this spec.
 
 #### Why provide a ‘rename’ method?
-By providing users with a reasonable alternative for renaming a file, we can discourage users from writing directly to the files collections under RethinkDBFS. With this approach we can prevent critical files collection documents fields from being mistakenly altered.
+By providing users with a reasonable alternative for renaming a file, we can discourage users from writing directly to the files tables under RethinkDBFS. With this approach we can prevent critical files collection documents fields from being mistakenly altered.
 
 #### Why is there no way to perform arbitrary updates on the files collection?
 The rename helper defined in this spec allows users to easily rename a stored file. While updating files collection documents in other, more granular ways might be helpful for some users, validating such updates to ensure that other files collection document fields remain protected is a complicated task. We leave the decision of how best to provide this functionality to a future spec.
 
 #### What is the ‘md5’ field of a files collection document and how is it used?
-‘md5’ holds an MD5 checksum that is computed from the original contents of a user file. Historically, RethinkDBFS did not use acknowledged writes, so this checksum was necessary to ensure that writes went through properly. With acknowledged writes, the MD5 checksum is still useful to ensure that files in RethinkDBFS have not been corrupted. A third party directly accessing the 'files' and ‘chunks’ collections under RethinkDBFS could, inadvertently or maliciously, make changes to documents that would make them unusable by RethinkDBFS. Comparing the MD5 in the files collection document to a re-computed MD5 allows detecting such errors and corruption. However, drivers now assume that the stored file is not corrupted, and applications that want to use the MD5 value to check for corruption must do so themselves.
+‘md5’ holds an MD5 checksum that is computed from the original contents of a user file. Historically, RethinkDBFS did not use acknowledged writes, so this checksum was necessary to ensure that writes went through properly. With acknowledged writes, the MD5 checksum is still useful to ensure that files in RethinkDBFS have not been corrupted. A third party directly accessing the 'files' and ‘chunks’ tables under RethinkDBFS could, inadvertently or maliciously, make changes to documents that would make them unusable by RethinkDBFS. Comparing the MD5 in the files collection document to a re-computed MD5 allows detecting such errors and corruption. However, drivers now assume that the stored file is not corrupted, and applications that want to use the MD5 value to check for corruption must do so themselves.
 
 #### Why store the MD5 checksum instead of creating the hash as-needed?
 The MD5 checksum must be computed when a file is initially uploaded to RethinkDBFS, as this is the only time we are guaranteed to have the entire uncorrupted file. Computing it on-the-fly as a file is read from RethinkDBFS would ensure that our reads were successful, but guarantees nothing about the state of the file in the system. A successful check against the stored MD5 checksum guarantees that the stored file matches the original and no corruption has occurred.
-
-#### Why do drivers no longer need to call the filemd5 command on upload?
-When a chunk is inserted and no error occurs the application can assume that the chunk was correctly inserted. No other operations that insert or modify data require the driver to double check that the operation succeeded. It can be assumed that any errors would have been detected by use of the appropriate write concern.
-
-#### What about write concern?
-This spec leaves the choice of how to set write concern to driver authors. Implementers may choose to accept write concern through options on the given methods, to set a configurable write concern on the RethinkDBFS object, to enforce a single write concern for all RethinkDBFS operations, or to do something different.
-
-#### If a user has given RethinkDBFS a write concern of 0, should we perform MD5 calculations?
-Yes, because the checksum is used for detecting future corruption or misuse of RethinkDBFS collections.
-
-#### Is RethinkDBFS limited by sharded systems?
-For best performance, clients using RethinkDBFS on a sharded system should use a shard key that ensures all chunks for a given stored file are routed to the same shard. Therefore, if the chunks collection is sharded, you should shard on the files_id. Normally only the chunks collection benefits from sharding, since the files collection is usually small. Otherwise, there are no limitations to RethinkDBFS on sharded systems.
 
 #### Why is contentType deprecated?
 Most fields in the files collection document are directly used by the driver, with the exception of: metadata, contentType and aliases. All information that is purely for use of the application should be embedded in the 'metadata' document. Users of RethinkDBFS who would like to store a contentType for use in their applications are encouraged to add a 'contentType' field to the ‘metadata’ document instead of using the deprecated top-level ‘contentType’ field.
