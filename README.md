@@ -164,10 +164,12 @@ RethinkDBFSBucket instances are immutable. Their properties MUST NOT be changed 
 
 For efficient execution of various RethinkDBFS operations the following indexes MUST exist:
 
+*Index spec is tentative and will likely change*
+
 An index on the `files` table:
 
 ```javascript
-r.table('<bucketName>_files').createIndex('<indexName>', [r.row('filename'), r.row('uploadDate')])
+r.table('<bucketName>_files').createIndex('<indexName>', [r.row('status'), r.row('filename'), r.row('uploadDate')])
 ```
 
 An index on the `chunks` table:
