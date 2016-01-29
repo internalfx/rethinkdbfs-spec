@@ -9,7 +9,7 @@ The purpose of this document is to adapt GridFS specifically for RethinkDB and a
 
 # Abstract
 
-RethinkDBFS is a convention drivers use to store and retrieve JSON binary data that exceeds RethinkDB's JSON-document size limit of 64MB. When this data, called a **user file**, is written to the system, RethinkDBFS divides the file into **chunks** that are stored as distinct documents in a **chunks collection**. To retrieve a stored file, RethinkDBFS locates and returns all of its component chunks. Internally, RethinkDBFS creates a **files collection document** for each stored file. Files collection documents hold information about stored files, and they are stored in a **files collection**.
+RethinkDBFS is a convention drivers use to store and retrieve JSON binary data that exceeds RethinkDB's JSON-document size limit of 64MB. When this data, called a **user file**, is written to the system, RethinkDBFS divides the file into **chunks** that are stored as distinct documents in a **chunks table**. To retrieve a stored file, RethinkDBFS locates and returns all of its component chunks. Internally, RethinkDBFS creates a **files table document** for each stored file. Files table documents hold information about stored files, and they are stored in a **files table**.
 
 # Definitions
 
@@ -20,10 +20,10 @@ The keywords “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL N
 ## Terms
 
 #### Bucket name
-A prefix under which a RethinkDBFS system’s tables are stored. Collection names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
+A prefix under which a RethinkDBFS system’s tables are stored. Table names for the files and chunks tables are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple buckets may exist within a single database. The default bucket name is ‘fs’.
 
 #### Chunk
-A section of a user file, stored as a single document in the ‘chunks’ collection of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
+A section of a user file, stored as a single document in the ‘chunks’ table of a RethinkDBFS bucket. The default size for the data field in chunks is 255KB. Chunk documents have the following form:
 
 ```javascript
 {
@@ -37,21 +37,21 @@ A section of a user file, stored as a single document in the ‘chunks’ collec
 | Key | Description |
 |---|---|
 | id | a unique ID for this document of type BSON ObjectId |
-| files_id | the id for this file (the id from the files collection document). |
+| files_id | the id for this file (the id from the files table document). |
 | n | the index number of this chunk, zero-based |
 | data | a chunk of data from the user file |
 
-#### Chunks collection
-A collection in which chunks of a user file are stored. The name for this collection is the word 'chunks' prefixed by the bucket name. The default is ‘fs.chunks’.
+#### Chunks table
+A table in which chunks of a user file are stored. The name for this table is the word 'chunks' prefixed by the bucket name. The default is ‘fs.chunks’.
 
 #### Empty chunk
 A chunk with a zero length “data” field.
 
-#### Files collection
-A collection in which information about stored files is stored. There will be one files collection document per stored file. The name for this collection is the word ‘files’ prefixed by the bucket name. The default is ‘fs.files’.
+#### Files table
+A table in which information about stored files is stored. There will be one files table document per stored file. The name for this table is the word ‘files’ prefixed by the bucket name. The default is ‘fs.files’.
 
 #### Files table document
-A document stored in the files collection that contains information about a single stored file. Files collection documents have the following form:
+A document stored in the files table that contains information about a single stored file. Files table documents have the following form:
 
 ```javascript
 {
@@ -74,13 +74,13 @@ A document stored in the files collection that contains information about a sing
 | sha256 | a hash of the contents of the stored file. |
 | filename | the name of this stored file; this does not need to be unique. |
 | metadata | any additional application data the user wishes to store. |
-| Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files collection document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files collection documents that might have additional fields. |
+| Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files table document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files table documents that might have additional fields. |
 
 ### Orphaned chunk
-A document in the chunks tables for which the `files_id` does not match any `id` in the files collection. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
+A document in the chunks tables for which the `files_id` does not match any `id` in the files table. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
 
 ### Stored File
-A user file that has been stored in RethinkDBFS, consisting of a files collection document in the files collection and zero or more documents in the chunks collection.
+A user file that has been stored in RethinkDBFS, consisting of a files table document in the files table and zero or more documents in the chunks table.
 
 ### Stream
 An abstraction that represents streamed I/O. In some languages a different word is used to represent this abstraction.
@@ -190,11 +190,11 @@ Creates a new RethinkDBFSBucket object, managing a RethinkDBFS bucket within the
 
 RethinkDBFSBucket objects MUST allow the following options to be configurable:
 
-- **bucketName:** the name of this RethinkDBFS bucket. The files and chunks collection for this RethinkDBFS bucket are prefixed by this name followed by an underscore. Defaults to “fs”. This allows multiple RethinkDBFS buckets, each with a unique name, to exist within the same database.
+- **bucketName:** the name of this RethinkDBFS bucket. The files and chunks table for this RethinkDBFS bucket are prefixed by this name followed by an underscore. Defaults to “fs”. This allows multiple RethinkDBFS buckets, each with a unique name, to exist within the same database.
 
 - **chunkSizeBytes:** the number of bytes stored in chunks for new user files added through this RethinkDBFSBucket object. This will not reformat existing files in the system that use a different chunk size. Defaults to 255KB.
 
-IF a driver supports configuring writeConcern or readPreference at the database or collection level, then RethinkDBFSBucket objects MUST also allow the following options to be configurable:
+IF a driver supports configuring writeConcern or readPreference at the database or table level, then RethinkDBFSBucket objects MUST also allow the following options to be configurable:
 
 - **writeConcern:** defaults to the write concern on the parent database (or client object if the parent database has no write concern).
 
@@ -224,18 +224,18 @@ For read operations, drivers MUST assume that the proper indexes exist.
 
 Immediately before the **first** write operation on an instance of a RethinkDBFSBucket class is attempted (and not earlier), drivers MUST:
 
-- determine if the files collection is empty using the primary read preference mode.
+- determine if the files table is empty using the primary read preference mode.
 - and if so, create the indexes described above if they do not already exist
 
-To determine whether the files collection is empty drivers SHOULD execute the equivalent of the following shell command:
+To determine whether the files table is empty drivers SHOULD execute the equivalent of the following shell command:
 
 ```javascript
   db.fs.files.findOne({}, { _id : 1 })
 ```
 
-If no document is returned the files collection is empty.
+If no document is returned the files table is empty.
 
-This method of determining whether the files collection is empty should perform better than checking the count in the case where the files collection is sharded.
+This method of determining whether the files table is empty should perform better than checking the count in the case where the files table is sharded.
 
 Drivers MUST check whether the indexes already exist before attempting to create them. This supports the scenario where an application is running with read-only authorizations.
 
@@ -256,15 +256,15 @@ class RethinkDBFSUploadOptions {
   chunkSizeBytes : Int32 optional;
 
   /**
-   * User data for the 'metadata' field of the files collection document.
+   * User data for the 'metadata' field of the files table document.
    * If not provided the driver MUST omit the metadata field from the
-   * files collection document.
+   * files table document.
    */
   metadata : Document optional;
 
   /**
    * DEPRECATED: A valid MIME type. If not provided the driver MUST omit the
-   * contentType field from the files collection document.
+   * contentType field from the files table document.
    *
    * Applications wishing to store a contentType should add a contentType field
    * to the metadata document instead.
@@ -273,7 +273,7 @@ class RethinkDBFSUploadOptions {
 
   /**
    * DEPRECATED: An array of aliases. If not provided the driver MUST omit the
-   * aliases field from the files collection document.
+   * aliases field from the files table document.
    *
    * Applications wishing to store aliases should add an aliases field to the
    * metadata document instead.
@@ -295,8 +295,8 @@ class RethinkDBFSBucket {
    * Uploads a user file to a RethinkDBFS bucket.
    *
    * Reads the contents of the user file from the @source Stream and uploads it
-   * as chunks in the chunks collection. After all the chunks have been uploaded,
-   * it creates a files collection document for @filename in the files collection.
+   * as chunks in the chunks table. After all the chunks have been uploaded,
+   * it creates a files table document for @filename in the files table.
    *
    * Returns the id of the uploaded file.
    */
@@ -307,7 +307,7 @@ class RethinkDBFSBucket {
 
 Uploads a user file to a RethinkDBFS bucket. For languages that have a Stream abstraction, drivers SHOULD use that Stream abstraction. For languages that do not have a Stream abstraction, drivers MUST create an abstraction that supports streaming.
 
-In the case of `open_upload_stream`, the driver returns a Stream to which the application will write the contents of the file. As the application writes the contents to the returned Stream, the contents are uploaded as chunks in the chunks collection. When the application signals it is done writing the contents of the file by calling close (or its equivalent) on the returned Stream, a files collection document is created in the files collection. Once the Stream has been closed (and the files collection document has been created) a driver MUST NOT allow further writes to the upload Stream.
+In the case of `open_upload_stream`, the driver returns a Stream to which the application will write the contents of the file. As the application writes the contents to the returned Stream, the contents are uploaded as chunks in the chunks table. When the application signals it is done writing the contents of the file by calling close (or its equivalent) on the returned Stream, a files table document is created in the files table. Once the Stream has been closed (and the files table document has been created) a driver MUST NOT allow further writes to the upload Stream.
 
 The driver MUST make the Id of the new file available to the caller. Typically a driver SHOULD make the Id available as a property named Id on the Stream that is returned. In languages where that is not idiomatic, a driver MUST make the Id available in a way that is appropriate for that language.
 
@@ -321,7 +321,7 @@ Note that in RethinkDBFS, `filename` is not a unique identifier. There may be ma
 
 If `chunkSizeBytes` is set through the options, that value MUST be used as the chunk size for this stored file. If this parameter is not specified, the default chunkSizeBytes setting for this RethinkDBFSBucket object MUST be used instead.
 
-To store a user file, drivers first generate an ObjectId to act as its id. Then, drivers store the contents of the user file in the chunks collection by breaking up the contents into chunks of size `chunkSizeBytes`. For a non-empty user file, for each Nth section of the file, drivers create a chunk document and set its fields as follows:
+To store a user file, drivers first generate an ObjectId to act as its id. Then, drivers store the contents of the user file in the chunks table by breaking up the contents into chunks of size `chunkSizeBytes`. For a non-empty user file, for each Nth section of the file, drivers create a chunk document and set its fields as follows:
 
 |Key|Description|
 |---|---|
@@ -329,20 +329,20 @@ To store a user file, drivers first generate an ObjectId to act as its id. Then,
 |n|this is the Nth section of the stored file, zero based.|
 |data|a section of file data, stored as JSON binary data with subtype. All chunks except the last one must be exactly `chunkSizeBytes` long. The last chunk can be smaller, and should only be as large as necessary.|
 
-While streaming the user file, drivers compute an SHA256 digest. This SHA256 digest will later be stored in the files collection document.
+While streaming the user file, drivers compute an SHA256 digest. This SHA256 digest will later be stored in the files table document.
 
-After storing all chunk documents generated for the user file in the `chunks` collection, drivers create a files collection document for the file and store it in the files collection. The fields in the files collection document are set as follows:
+After storing all chunk documents generated for the user file in the `chunks` table, drivers create a files table document for the file and store it in the files table. The fields in the files table document are set as follows:
 
 |Key|Description|
 |---|---|
 |length|the length of this stored file, in bytes.|
-|chunkSize|the chunk size in bytes used to break the user file into chunks. While the configuration option is named ‘chunkSizeBytes’ for clarity, for legacy reasons, the files collection document uses only ‘chunkSize’.|
-|uploadDate|a BSON datetime object for the current time, in UTC, when the files collection document was created.|
+|chunkSize|the chunk size in bytes used to break the user file into chunks. While the configuration option is named ‘chunkSizeBytes’ for clarity, for legacy reasons, the files table document uses only ‘chunkSize’.|
+|uploadDate|a BSON datetime object for the current time, in UTC, when the files table document was created.|
 |sha256|SHA256 checksum for this user file, computed from the file’s data, stored as a hex string.|
 |filename|the filename passed to this function, UTF-8 encoded.|
 |metadata|the `metadata` document passed in the options, if provided; otherwise omitted.|
 
-If a user file contains no data, drivers MUST still create a files collection document for it with length set to zero. Drivers MUST NOT create any empty chunks for this file.
+If a user file contains no data, drivers MUST still create a files table document for it with length set to zero. Drivers MUST NOT create any empty chunks for this file.
 
 Note that drivers are no longer required to run the 'filemd5' to confirm that all chunks were successfully uploaded. We assume that if none of the inserts failed then the chunks must have been successfully inserted, and running the 'filemd5' command would just be unnecessary overhead.
 
@@ -391,11 +391,11 @@ Note: if a file in a RethinkDBFS bucket was added by a legacy implementation, it
 
 #### Implementation details:
 
-Drivers must first retrieve the files collection document for this file. If there is no files collection document, the file either never existed, is in the process of being deleted, or has been corrupted, and the driver MUST raise an error.
+Drivers must first retrieve the files table document for this file. If there is no files table document, the file either never existed, is in the process of being deleted, or has been corrupted, and the driver MUST raise an error.
 
 Then, implementers retrieve all chunks with files_id equal to id, sorted in ascending order on “n”.
 
-However, when downloading a zero length stored file the driver MUST NOT issue a query against the chunks collection, since that query is not necessary. For a zero length file, drivers return either an empty stream or send nothing to the provided stream (depending on the download method).
+However, when downloading a zero length stored file the driver MUST NOT issue a query against the chunks table, since that query is not necessary. For a zero length file, drivers return either an empty stream or send nothing to the provided stream (depending on the download method).
 
 If a networking error or server error occurs, drivers MUST raise an error.
 
@@ -407,7 +407,7 @@ As drivers stream the stored file they MUST check that each chunk received is th
 class RethinkDBFSBucket {
 
   /**
-   * Given a @id, delete this stored file’s files collection document and
+   * Given a @id, delete this stored file’s files table document and
    * associated chunks from a RethinkDBFS bucket.
    */
   void delete(ObjectId id);
@@ -415,19 +415,19 @@ class RethinkDBFSBucket {
 }
 ```
 
-Deletes the stored file’s files collection document and associated chunks from the underlying database.
+Deletes the stored file’s files table document and associated chunks from the underlying database.
 
 As noted for download(), drivers that previously used id’s of a different type MAY implement a delete() method that accepts that type, but MUST mark that method as deprecated.
 
 #### Implementation details:
 
-There is an inherent race condition between the chunks and files tables. Without some transaction-like behavior between these two tables, it is always possible for one client to delete a stored file while another client is attempting a read of the stored file. For example, imagine client A retrieves a stored file’s files collection document, client B deletes the stored file, then client A attempts to read the stored file’s chunks. Client A wouldn’t find any chunks for the given stored file. To minimize the window of vulnerability of reading a stored file that is the process of being deleted, drivers MUST first delete the files collection document for a stored file, then delete its associated chunks.
+There is an inherent race condition between the chunks and files tables. Without some transaction-like behavior between these two tables, it is always possible for one client to delete a stored file while another client is attempting a read of the stored file. For example, imagine client A retrieves a stored file’s files table document, client B deletes the stored file, then client A attempts to read the stored file’s chunks. Client A wouldn’t find any chunks for the given stored file. To minimize the window of vulnerability of reading a stored file that is the process of being deleted, drivers MUST first delete the files table document for a stored file, then delete its associated chunks.
 
-If there is no such file listed in the files collection, drivers MUST raise an error. Drivers MAY attempt to delete any orphaned chunks with files_id equal to id before raising the error.
+If there is no such file listed in the files table, drivers MUST raise an error. Drivers MAY attempt to delete any orphaned chunks with files_id equal to id before raising the error.
 
 If a networking or server error occurs, drivers MUST raise an error.
 
-# Generic Find on Files Collection
+# Generic Find on Files Table
 
 ```javascript
 class RethinkDBFSFindOptions {
@@ -468,20 +468,20 @@ class RethinkDBFSFindOptions {
 class RethinkDBFSBucket {
 
   /**
-   * Find and return the files collection documents that match @filter.
+   * Find and return the files table documents that match @filter.
    */
   Iterable find(Document filter, RethinkDBFSFindOptions options=null);
 
 }
 ```
 
-This call will trigger a find() operation on the files collection using the given filter. Drivers returns a sequence of documents that can be iterated over. Drivers return an empty or null set when there are no matching files collection documents. As the number of files could be large, drivers SHOULD return a cursor-like iterable type and SHOULD NOT return a fixed-size array type.
+This call will trigger a find() operation on the files table using the given filter. Drivers returns a sequence of documents that can be iterated over. Drivers return an empty or null set when there are no matching files table documents. As the number of files could be large, drivers SHOULD return a cursor-like iterable type and SHOULD NOT return a fixed-size array type.
 
 ### Implementation details:
 
-Drivers SHOULD NOT perform any validation on the filter. If the filter contains fields that do not exist within files collection documents, then an empty result set will be returned.
+Drivers SHOULD NOT perform any validation on the filter. If the filter contains fields that do not exist within files table documents, then an empty result set will be returned.
 
-Drivers MUST document how users query files collection documents, including how to query metadata, e.g. using a filter like { metadata.fieldname : “some_criteria” }.
+Drivers MUST document how users query files table documents, including how to query metadata, e.g. using a filter like { metadata.fieldname : “some_criteria” }.
 
 # Advanced API
 
@@ -531,7 +531,7 @@ Retrieves a stored file from a RethinkDBFS bucket. For languages that have a Str
 
 If there is no file with the given filename, or if the requested revision does not exist, drivers MUST raise an error with a distinct message for each case.
 
-Drivers MUST select the files collection document of the file to-be-returned by running a query on the files collection for the given filename, sorted by uploadDate (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to
+Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by uploadDate (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to
 skip equals the revision number.
 
 If a networking error or server error occurs, drivers MUST raise an error.
@@ -544,7 +544,7 @@ In the case of download_to_stream, drivers are not required to support partial f
 
 If either ‘start’ or ‘end’ is invalid, drivers MUST raise an error. These values are considered invalid if they are negative, greater than the file length, or if ‘start’ is greater than ‘end’.
 
-When performing partial reads, drivers SHOULD use the file’s ‘chunkSize’ to calculate which chunks contain the desired section and avoid reading unneeded documents from the ‘chunks’ collection.
+When performing partial reads, drivers SHOULD use the file’s ‘chunkSize’ to calculate which chunks contain the desired section and avoid reading unneeded documents from the ‘chunks’ table.
 
 ## Renaming stored files
 
@@ -559,13 +559,13 @@ class RethinkDBFSBucket {
 }
 ```
 
-Sets the filename field in the stored file’s files collection document to the new filename.
+Sets the filename field in the stored file’s files table document to the new filename.
 
 #### Implementation details:
 
-Drivers construct and execute an update_one command on the files collection using `{ _id: @id }` as the filter and `{ $set : { filename : "new_filename" } }` as the update parameter.
+Drivers construct and execute an update_one command on the files table using `{ _id: @id }` as the filter and `{ $set : { filename : "new_filename" } }` as the update parameter.
 
-To rename multiple revisions of the same filename, users must retrieve the full list of files collection documents for a given filename and execute `rename` on each corresponding `_id`.
+To rename multiple revisions of the same filename, users must retrieve the full list of files table documents for a given filename and execute `rename` on each corresponding `_id`.
 
 If there is no file with the given id, drivers MUST raise an error.
 
@@ -585,7 +585,7 @@ class RethinkDBFSBucket {
 
 This method drops the files and chunks tables associated with this RethinkDBFS bucket.
 
-Drivers should drop the files collection first, and then the chunks collection.
+Drivers should drop the files table first, and then the chunks table.
 
 # Motivation for Change
 
@@ -602,22 +602,22 @@ On MMAPv1, the server provides documents with extra padding to allow for in-plac
 RethinkDBFS works with documents stored in multiple tables within RethinkDB. Because there is currently no way to atomically perform operations across tables in RethinkDB, there is no way to alter stored files in a way that prevents race conditions between RethinkDBFS clients. Updating RethinkDBFS stored files without that server functionality would involve a data model that could support this type of concurrency, and changing the RethinkDBFS data model is outside of the scope of this spec.
 
 #### Why provide a ‘rename’ method?
-By providing users with a reasonable alternative for renaming a file, we can discourage users from writing directly to the files tables under RethinkDBFS. With this approach we can prevent critical files collection documents fields from being mistakenly altered.
+By providing users with a reasonable alternative for renaming a file, we can discourage users from writing directly to the files tables under RethinkDBFS. With this approach we can prevent critical files table documents fields from being mistakenly altered.
 
-#### Why is there no way to perform arbitrary updates on the files collection?
-The rename helper defined in this spec allows users to easily rename a stored file. While updating files collection documents in other, more granular ways might be helpful for some users, validating such updates to ensure that other files collection document fields remain protected is a complicated task. We leave the decision of how best to provide this functionality to a future spec.
+#### Why is there no way to perform arbitrary updates on the files table?
+The rename helper defined in this spec allows users to easily rename a stored file. While updating files table documents in other, more granular ways might be helpful for some users, validating such updates to ensure that other files table document fields remain protected is a complicated task. We leave the decision of how best to provide this functionality to a future spec.
 
-#### What is the ‘md5’ field of a files collection document and how is it used?
-‘md5’ holds an MD5 checksum that is computed from the original contents of a user file. Historically, RethinkDBFS did not use acknowledged writes, so this checksum was necessary to ensure that writes went through properly. With acknowledged writes, the MD5 checksum is still useful to ensure that files in RethinkDBFS have not been corrupted. A third party directly accessing the 'files' and ‘chunks’ tables under RethinkDBFS could, inadvertently or maliciously, make changes to documents that would make them unusable by RethinkDBFS. Comparing the MD5 in the files collection document to a re-computed MD5 allows detecting such errors and corruption. However, drivers now assume that the stored file is not corrupted, and applications that want to use the MD5 value to check for corruption must do so themselves.
+#### What is the ‘md5’ field of a files table document and how is it used?
+‘md5’ holds an MD5 checksum that is computed from the original contents of a user file. Historically, RethinkDBFS did not use acknowledged writes, so this checksum was necessary to ensure that writes went through properly. With acknowledged writes, the MD5 checksum is still useful to ensure that files in RethinkDBFS have not been corrupted. A third party directly accessing the 'files' and ‘chunks’ tables under RethinkDBFS could, inadvertently or maliciously, make changes to documents that would make them unusable by RethinkDBFS. Comparing the MD5 in the files table document to a re-computed MD5 allows detecting such errors and corruption. However, drivers now assume that the stored file is not corrupted, and applications that want to use the MD5 value to check for corruption must do so themselves.
 
 #### Why store the MD5 checksum instead of creating the hash as-needed?
 The MD5 checksum must be computed when a file is initially uploaded to RethinkDBFS, as this is the only time we are guaranteed to have the entire uncorrupted file. Computing it on-the-fly as a file is read from RethinkDBFS would ensure that our reads were successful, but guarantees nothing about the state of the file in the system. A successful check against the stored MD5 checksum guarantees that the stored file matches the original and no corruption has occurred.
 
 #### Why is contentType deprecated?
-Most fields in the files collection document are directly used by the driver, with the exception of: metadata, contentType and aliases. All information that is purely for use of the application should be embedded in the 'metadata' document. Users of RethinkDBFS who would like to store a contentType for use in their applications are encouraged to add a 'contentType' field to the ‘metadata’ document instead of using the deprecated top-level ‘contentType’ field.
+Most fields in the files table document are directly used by the driver, with the exception of: metadata, contentType and aliases. All information that is purely for use of the application should be embedded in the 'metadata' document. Users of RethinkDBFS who would like to store a contentType for use in their applications are encouraged to add a 'contentType' field to the ‘metadata’ document instead of using the deprecated top-level ‘contentType’ field.
 
 #### Why are aliases deprecated?
-The ‘aliases’ field of the files collection documents was misleading. It implies that a file in RethinkDBFS could be accessed by alternate names when, in fact, none of the existing implementations offer this functionality. For RethinkDBFS implementations that retrieve stored files by filename or support specifying specific revisions of a stored file, it is unclear how ‘aliases’ should be interpreted. Users of RethinkDBFS who would like to store alternate filenames for use in their applications are encouraged to add an ‘aliases’ field to the ‘metadata’ document instead of using the deprecated top-level ‘aliases’ field.
+The ‘aliases’ field of the files table documents was misleading. It implies that a file in RethinkDBFS could be accessed by alternate names when, in fact, none of the existing implementations offer this functionality. For RethinkDBFS implementations that retrieve stored files by filename or support specifying specific revisions of a stored file, it is unclear how ‘aliases’ should be interpreted. Users of RethinkDBFS who would like to store alternate filenames for use in their applications are encouraged to add an ‘aliases’ field to the ‘metadata’ document instead of using the deprecated top-level ‘aliases’ field.
 
 #### What happened to the put and get methods from earlier drafts?
 Upload and download are more idiomatic names that more clearly indicate their purpose. Get and put are often associated with getting and setting properties of a class, and using them instead of download and upload was confusing.
@@ -626,7 +626,7 @@ Upload and download are more idiomatic names that more clearly indicate their pu
 We assume that RethinkDBFS files are usually quite large and therefore that the RethinkDBFS API must support streaming. Most languages have easy ways to wrap a stream around a byte array. Drivers are free to add helper methods that directly support uploading and downloading RethinkDBFS files as byte arrays.
 
 #### Should drivers report an error if a stored file has extra chunks?
-The length and the chunkSize fields of the files collection document together imply exactly how many chunks a stored file should have. If the chunks collection has any extra chunks the stored file is in an inconsistent state. Ideally we would like to report that as an error, but this is an extremely unlikely state and we don't want to pay a performance penalty checking for an error that is almost never there. Therefore, drivers MAY ignore extra chunks.
+The length and the chunkSize fields of the files table document together imply exactly how many chunks a stored file should have. If the chunks table has any extra chunks the stored file is in an inconsistent state. Ideally we would like to report that as an error, but this is an extremely unlikely state and we don't want to pay a performance penalty checking for an error that is almost never there. Therefore, drivers MAY ignore extra chunks.
 
 # Future work
 
