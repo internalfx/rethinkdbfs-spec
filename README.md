@@ -204,9 +204,13 @@ RethinkDBFSBucket instances are immutable. Their properties MUST NOT be changed 
 
 For efficient execution of various RethinkDBFS operations the following indexes MUST exist:
 
-- an index on { filename : 1, uploadDate : 1 } on the files collection
+An index on the `files` table:
 
-- a unique index on { files_id : 1, n : 1 } on the chunks collection
+`r.db(<dbName>).table('<bucketName>_files').createIndex('<indexName>', [r.row('filename'), r.row('uploadDate)])`
+
+An index on the `chunks` table:
+
+`r.db(<dbName>).table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n)])`
 
 Normally we leave it up to the user to create whatever indexes they see fit, but because RethinkDBFS is likely to be looked at as a black box we should create these indexes automatically in a way that involves the least amount of overhead possible.
 
