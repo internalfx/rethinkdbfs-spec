@@ -531,8 +531,7 @@ Retrieves a stored file from a RethinkDBFS bucket. For languages that have a Str
 
 If there is no file with the given filename, or if the requested revision does not exist, drivers MUST raise an error with a distinct message for each case.
 
-Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by uploadDate (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to
-skip equals the revision number.
+Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by uploadDate (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to skip equals the revision number.
 
 If a networking error or server error occurs, drivers MUST raise an error.
 
