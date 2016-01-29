@@ -1,176 +1,126 @@
-===========
-RethinkDBFS Spec
-===========
+# RethinkDBFS Spec
 
-Adapted from the original GridFS spec for MongoDB
+Copied and adapted from the original [GridFS spec](https://github.com/mongodb/specifications) for MongoDB
 
-:Spec: 105
-:Title: RethinkDBFS Spec
-:Authors: Bryan Morris
-:Advisors: David Golden and Jeff Yemin
-:Status: Approved
-:Type: Standards
-:Minimum Server Version: 2.2
-:Last Modified: September 16, 2015
-:Version: 1.0
+- Authors **Bryan Morris**
 
-.. contents::
+# Abstract
 
---------
-
-Abstract
-========
-
-GridFS is a convention drivers use to store and retrieve BSON binary
-data (type “\\x05”) that exceeds MongoDB’s BSON-document size limit of
-16MB. When this data, called a **user file**, is written to the system,
-GridFS divides the file into **chunks** that are stored as distinct
-documents in a **chunks collection**. To retrieve a stored file, GridFS
-locates and returns all of its component chunks. Internally, GridFS
+RethinkDBFS is a convention drivers use to store and retrieve JSON binary
+data that exceeds RethinkDB's JSON-document size limit of
+64MB. When this data, called a **user file**, is written to the system,
+RethinkDBFS divides the file into **chunks** that are stored as distinct
+documents in a **chunks collection**. To retrieve a stored file, RethinkDBFS
+locates and returns all of its component chunks. Internally, RethinkDBFS
 creates a **files collection document** for each stored file. Files
 collection documents hold information about stored files, and they are
 stored in a **files collection**.
 
-This spec defines a basic API for GridFS. This spec also outlines
-advanced GridFS features that drivers can choose to support in their
-implementations. Additionally, this document attempts to clarify the
-meaning and purpose of all fields in the GridFS data model, disambiguate
-GridFS terminology, and document configuration options that were
-previously unspecified.
+# Definitions
 
-Definitions
-===========
-
-META
-----
+# META
 
 The keywords “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”,
 “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this
-document are to be interpreted as described in `RFC 2119 <https://www.ietf.org/rfc/rfc2119.txt>`_.
+document are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).
 
-Terms
------
+# Terms
 
-Bucket name
-  A prefix under which a GridFS system’s collections are stored. Collection names for the files and chunks
-  collections are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple
-  buckets may exist within a single database. The default bucket name is ‘fs’.
+### Bucket name
+A prefix under which a RethinkDBFS system’s collections are stored. Collection names for the files and chunks
+collections are prefixed with the bucket name. The bucket name MUST be configurable by the user. Multiple
+buckets may exist within a single database. The default bucket name is ‘fs’.
 
-Chunk
-  A section of a user file, stored as a single document in the ‘chunks’ collection of a GridFS bucket.
-  The default size for the data field in chunks is 255KB. Chunk documents have the following form:
+### Chunk
+A section of a user file, stored as a single document in the ‘chunks’ collection of a RethinkDBFS bucket.
+The default size for the data field in chunks is 255KB. Chunk documents have the following form:
 
-  .. code:: javascript
+```javascript
+{
+  "id": <Id>,
+  "files_id": <Id>,
+  "n": <Integer>,
+  "data": <binary data>
+}
+```
 
-    {
-      "_id" : <ObjectId>,
-      "files_id" : <ObjectId>,
-      "n" : <Int32>,
-      "data" : <binary data>
-    }
+| Key | Description |
+|---|---|
+| id | a unique ID for this document of type BSON ObjectId |
+| files_id | the id for this file (the id from the files collection document). |
+| n | the index number of this chunk, zero-based |
+| data | a chunk of data from the user file |
 
-  :_id: a unique ID for this document of type BSON ObjectId
-  :files_id: the id for this file (the _id from the files collection document). This field takes the type of
-    the corresponding _id in the files collection, which on existing stored files created by legacy drivers may
-    not be ObjectId.
-  :n: the index number of this chunk, zero-based.
-  :data: a chunk of data from the user file
+### Chunks collection
+A collection in which chunks of a user file are stored. The name for this collection is the word 'chunks' prefixed by the bucket name. The default is ‘fs.chunks’.
 
-Chunks collection
-  A collection in which chunks of a user file are stored. The name for this collection is the word 'chunks'
-  prefixed by the bucket name. The default is ‘fs.chunks’.
+### Empty chunk
+A chunk with a zero length “data” field.
 
-Empty chunk
-  A chunk with a zero length “data” field.
+### Files collection
+A collection in which information about stored files is stored. There will be one files collection document per stored file. The name for this collection is the word ‘files’ prefixed by the bucket name. The default is ‘fs.files’.
 
-Files collection
-  A collection in which information about stored files is stored. There will be one files collection document
-  per stored file. The name for this collection is the word ‘files’ prefixed by the bucket name. The default
-  is ‘fs.files’.
+### Files collection document
+A document stored in the files collection that contains information about a single stored file. Files collection documents have the following form:
 
-Files collection document
-  A document stored in the files collection that contains information about a single stored file. Files collection
-  documents have the following form:
+```javascript
+{
+  "id" : <Id>,
+  "length" : <Integer>,
+  "chunkSize" : <Int32>,
+  "uploadDate" : <DateTime>,
+  "md5" : <hex string>,
+  "filename" : <string>,
+  "contentType" : <string>,
+  "aliases" : <string array>,
+  "metadata" : <Document>
+}
+```
 
-  .. code:: javascript
+| Key | Description |
+|---|---|
+| id | a unique ID for this document. |
+| length | the length of this stored file, in bytes. |
+| chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB. |
+| uploadDate | the date and time this file was added to RethinkDBFS, stored as a JSON datetime value. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| md5 | a hash of the contents of the stored file. |
+| filename | the name of this stored file; this does not need to be unique. |
+| metadata | any additional application data the user wishes to store. |
+| Note | some older versions of RethinkDBFS implementations allowed applications to add arbitrary fields to the files collection document at the root level. New implementations of RethinkDBFS will not allow this, but must be prepared to handle existing files collection documents that might have additional fields. |
 
-    {
-      "_id" : <ObjectId>,
-      "length" : <Int64>,
-      "chunkSize" : <Int32>,
-      "uploadDate" : <BSON datetime, ms since Unix epoch in UTC>,
-      "md5" : <hex string>,
-      "filename" : <string>,
-      "contentType" : <string>,
-      "aliases" : <string array>,
-      "metadata" : <Document>
-    }
+### Orphaned chunk
+A document in the chunks collections for which the `files_id` does not match any `id` in the files collection. Orphaned chunks may be created if write or delete operations on RethinkDBFS fail part-way through.
 
-  :_id: a unique ID for this document, of type BSON ObjectId. Legacy GridFS systems may store this value as
-    a different type. New files must be stored using an ObjectId.
-  :length: the length of this stored file, in bytes
-  :chunkSize: the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB.
-  :uploadDate: the date and time this file was added to GridFS, stored as a BSON datetime value. The value of this
-    field MUST be the datetime when the upload completed, not the datetime when it was begun.
-  :md5: a hash of the contents of the stored file
-  :filename: the name of this stored file; this does not need to be unique
-  :contentType: DEPRECATED, any MIME type, for application use only
-  :aliases: DEPRECATED, for application use only
-  :metadata: any additional application data the user wishes to store
+### Stored File
+A user file that has been stored in RethinkDBFS, consisting of a files collection document in the files collection and zero or more documents in the chunks collection.
 
-  Note: some older versions of GridFS implementations allowed applications to
-  add arbitrary fields to the files collection document at the root level. New
-  implementations of GridFS will not allow this, but must be prepared to
-  handle existing files collection documents that might have additional fields.
+### Stream
+An abstraction that represents streamed I/O. In some languages a different word is used to represent this abstraction.
 
-Orphaned chunk
-  A document in the chunks collections for which the
-  “files_id” does not match any “_id” in the files collection. Orphaned
-  chunks may be created if write or delete operations on GridFS fail
-  part-way through.
+### User File
+A data added by a user to RethinkDBFS. This data may map to an actual file on disk, a stream of input, a large data object, or any other large amount of consecutive data.
 
-Stored File
-  A user file that has been stored in GridFS, consisting
-  of a files collection document in the files collection and zero or more
-  documents in the chunks collection.
+# Specification
 
-Stream
-  An abstraction that represents streamed I/O. In some languages a different
-  word is used to represent this abstraction.
-
-User File
-  A data added by a user to GridFS. This data may map to an actual file on disk, a stream of input, a large data
-  object, or any other large amount of consecutive data.
-
-Specification
-=============
-
-Guidance
---------
-
-Documentation
-~~~~~~~~~~~~~
+## Documentation
 
 The documentation provided in code below is merely for driver authors
 and SHOULD NOT be taken as required documentation for the driver.
 
-Operations
-~~~~~~~~~~
+## Operations
 
 All drivers MUST offer the Basic API operations defined in the following
 sections and MAY offer the Advanced API operations. This does not
 preclude a driver from offering more.
 
-Operation Parameters
-~~~~~~~~~~~~~~~~~~~~
+## Operation Parameters
 
 All drivers MUST offer the same options for each operation as defined in
 the following sections. This does not preclude a driver from offering
 more. The options parameter is optional. A driver SHOULD NOT require a
 user to specify optional parameters.
 
-Deviations
-~~~~~~~~~~
+## Deviations
 
 A non-exhaustive list of acceptable deviations are as follows:
 
@@ -180,11 +130,11 @@ A non-exhaustive list of acceptable deviations are as follows:
 
     id = bucket.upload_from_stream(filename, source, chunkSizeBytes: 16 * 1024);
 
-- Using a fluent style for constructing a GridFSBucket instance:
+- Using a fluent style for constructing a RethinkDBFSBucket instance:
 
   .. code:: javascript
 
-    bucket = new GridFSBucket(database)
+    bucket = new RethinkDBFSBucket(database)
       .withReadPreference(ReadPreference.Secondary);
 
 When using a fluent-style builder, all options should be named
@@ -217,9 +167,9 @@ A non-exhaustive list of acceptable naming deviations are as follows:
   type is a TimeSpan structure that includes units. However,
   calling it "MaximumTime" would not be acceptable.
 
-- Using "GridFSUploadOptions" as an example, Javascript wouldn't need
+- Using "RethinkDBFSUploadOptions" as an example, Javascript wouldn't need
   to name it while other drivers might prefer to call it
-  "GridFSUploadArgs" or "GridFSUploadParams". However, calling it
+  "RethinkDBFSUploadArgs" or "RethinkDBFSUploadParams". However, calling it
   "UploadOptions" would not be acceptable.
 
 - Languages that use a different word than "Stream" to represent a
@@ -246,12 +196,12 @@ implement additionally.
 Basic API
 =========
 
-Configurable GridFSBucket class
+Configurable RethinkDBFSBucket class
 -------------------------------
 
 .. code:: javascript
 
-  class GridFSBucketOptions {
+  class RethinkDBFSBucketOptions {
 
     /**
      * The bucket name. Defaults to 'fs'.
@@ -275,34 +225,34 @@ Configurable GridFSBucket class
 
   }
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
-     * Create a new GridFSBucket object on @db with the given @options.
+     * Create a new RethinkDBFSBucket object on @db with the given @options.
      */
-    GridFSBucket new(Database db, GridFSBucketOptions options=null);
+    RethinkDBFSBucket new(Database db, RethinkDBFSBucketOptions options=null);
 
   }
 
-Creates a new GridFSBucket object, managing a GridFS bucket within the
+Creates a new RethinkDBFSBucket object, managing a RethinkDBFS bucket within the
 given database.
 
-GridFSBucket objects MUST allow the following options to be
+RethinkDBFSBucket objects MUST allow the following options to be
 configurable:
 
-- **bucketName:** the name of this GridFS bucket. The files and chunks
-  collection for this GridFS bucket are prefixed by this name
-  followed by a dot. Defaults to “fs”. This allows multiple GridFS
+- **bucketName:** the name of this RethinkDBFS bucket. The files and chunks
+  collection for this RethinkDBFS bucket are prefixed by this name
+  followed by a dot. Defaults to “fs”. This allows multiple RethinkDBFS
   buckets, each with a unique name, to exist within the same
   database.
 
 - **chunkSizeBytes:** the number of bytes stored in chunks for new
-  user files added through this GridFSBucket object. This will not
+  user files added through this RethinkDBFSBucket object. This will not
   reformat existing files in the system that use a different chunk
   size. Defaults to 255KB.
 
 IF a driver supports configuring writeConcern or readPreference at the
-database or collection level, then GridFSBucket objects MUST also allow
+database or collection level, then RethinkDBFSBucket objects MUST also allow
 the following options to be configurable:
 
 - **writeConcern:** defaults to the write concern on the parent
@@ -313,15 +263,15 @@ the following options to be configurable:
   database (or client object if the parent database has no read
   preference).
 
-GridFSBucket instances are immutable. Their properties MUST NOT be
+RethinkDBFSBucket instances are immutable. Their properties MUST NOT be
 changed after the instance has been created. If your driver provides a
 fluent way to provide new values for properties, these fluent methods
-MUST return new instances of GridFSBucket.
+MUST return new instances of RethinkDBFSBucket.
 
 Indexes
 -------
 
-For efficient execution of various GridFS operations the following
+For efficient execution of various RethinkDBFS operations the following
 indexes MUST exist:
 
 - an index on { filename : 1, uploadDate : 1 } on the files collection
@@ -329,7 +279,7 @@ indexes MUST exist:
 - a unique index on { files_id : 1, n : 1 } on the chunks collection
 
 Normally we leave it up to the user to create whatever indexes they see
-fit, but because GridFS is likely to be looked at as a black box we
+fit, but because RethinkDBFS is likely to be looked at as a black box we
 should create these indexes automatically in a way that involves the
 least amount of overhead possible.
 
@@ -341,7 +291,7 @@ For read operations, drivers MUST assume that the proper indexes exist.
 Before write operations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Immediately before the **first** write operation on an instance of a GridFSBucket
+Immediately before the **first** write operation on an instance of a RethinkDBFSBucket
 class is attempted (and not earlier), drivers MUST:
 
 - determine if the files collection is empty using the primary read preference mode.
@@ -372,11 +322,11 @@ File Upload
 
 .. code:: javascript
 
-  class GridFSUploadOptions {
+  class RethinkDBFSUploadOptions {
 
     /**
      * The number of bytes per chunk of this file. Defaults to the
-     * chunkSizeBytes in the GridFSBucketOptions.
+     * chunkSizeBytes in the RethinkDBFSBucketOptions.
      */
     chunkSizeBytes : Int32 optional;
 
@@ -407,17 +357,17 @@ File Upload
 
   }
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
      * Opens a Stream that the application can write the contents of the file to.
      *
      * Returns a Stream to which the application will write the contents.
      */
-    Stream open_upload_stream(string filename, GridFSUploadOptions options=null);
+    Stream open_upload_stream(string filename, RethinkDBFSUploadOptions options=null);
 
     /**
-     * Uploads a user file to a GridFS bucket.
+     * Uploads a user file to a RethinkDBFS bucket.
      *
      * Reads the contents of the user file from the @source Stream and uploads it
      * as chunks in the chunks collection. After all the chunks have been uploaded,
@@ -425,11 +375,11 @@ File Upload
      *
      * Returns the id of the uploaded file.
      */
-    ObjectId upload_from_stream(string filename, Stream source, GridFSUploadOptions options=null);
+    ObjectId upload_from_stream(string filename, Stream source, RethinkDBFSUploadOptions options=null);
 
   }
 
-Uploads a user file to a GridFS bucket. For languages that have a Stream
+Uploads a user file to a RethinkDBFS bucket. For languages that have a Stream
 abstraction, drivers SHOULD use that Stream abstraction. For languages
 that do not have a Stream abstraction, drivers MUST create an
 abstraction that supports streaming.
@@ -457,8 +407,8 @@ Drivers for dynamic languages MUST ignore any unrecognized fields in the options
 for this method (this does not apply to drivers for static languages which
 define an Options class that by definition only contains valid fields).
 
-Note that in GridFS, ‘filename’ is not a unique identifier. There may be
-many stored files with the same filename stored in a GridFS bucket under
+Note that in RethinkDBFS, ‘filename’ is not a unique identifier. There may be
+many stored files with the same filename stored in a RethinkDBFS bucket under
 different ids. Multiple stored files with the same filename are called
 'revisions', and the 'uploadDate' is used to distinguish newer revisions
 from older ones.
@@ -467,7 +417,7 @@ from older ones.
 
 If ‘chunkSizeBytes’ is set through the options, that value MUST be used
 as the chunk size for this stored file. If this parameter is not
-specified, the default chunkSizeBytes setting for this GridFSBucket
+specified, the default chunkSizeBytes setting for this RethinkDBFSBucket
 object MUST be used instead.
 
 To store a user file, drivers first generate an ObjectId to act as its
@@ -549,7 +499,7 @@ File Download
 
 .. code:: javascript
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /** Opens a Stream from which the application can read the contents of the stored file
      * specified by @id.
@@ -566,7 +516,7 @@ File Download
 
   }
 
-Downloads a stored file from a GridFS bucket. For languages that have a
+Downloads a stored file from a RethinkDBFS bucket. For languages that have a
 Stream abstraction, drivers SHOULD use that Stream abstraction. For
 languages that do not have a Stream abstraction, drivers MUST create an
 abstraction that supports streaming.
@@ -580,7 +530,7 @@ In the case of download_to_stream the driver writes the contents of
 the stored file to the provided Stream. The driver does NOT call close
 (or its equivalent) on the Stream.
 
-Note: if a file in a GridFS bucket was added by a legacy implementation,
+Note: if a file in a RethinkDBFS bucket was added by a legacy implementation,
 its id may be of a type other than ObjectId. Drivers that previously
 used id’s of a different type MAY implement a download() method that
 accepts that type, but MUST mark that method as deprecated.
@@ -616,11 +566,11 @@ File Deletion
 
 .. code:: javascript
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
      * Given a @id, delete this stored file’s files collection document and
-     * associated chunks from a GridFS bucket.
+     * associated chunks from a RethinkDBFS bucket.
      */
     void delete(ObjectId id);
 
@@ -658,7 +608,7 @@ Generic Find on Files Collection
 
 .. code:: javascript
 
-  class GridFSFindOptions {
+  class RethinkDBFSFindOptions {
 
     /**
      * The number of documents to return per batch.
@@ -693,12 +643,12 @@ Generic Find on Files Collection
 
   }
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
      * Find and return the files collection documents that match @filter.
      */
-    Iterable find(Document filter, GridFSFindOptions options=null);
+    Iterable find(Document filter, RethinkDBFSFindOptions options=null);
 
   }
 
@@ -727,7 +677,7 @@ File Download by Filename
 
 .. code:: javascript
 
-  class GridFSDownloadByNameOptions {
+  class RethinkDBFSDownloadByNameOptions {
 
     /**
      * Which revision (documents with the same filename and different uploadDate)
@@ -745,25 +695,25 @@ File Download by Filename
 
   }
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /** Opens a Stream from which the application can read the contents of the stored file
      * specified by @filename and the revision in @options.
      *
      * Returns a Stream.
      */
-    Stream open_download_stream_by_name(string filename, GridFSDownloadByNameOptions options=null);
+    Stream open_download_stream_by_name(string filename, RethinkDBFSDownloadByNameOptions options=null);
 
     /**
      * Downloads the contents of the stored file specified by @filename and by the
      * revision in @options and writes the contents to the @destination Stream.
      */
     void download_to_stream_by_name(string filename, Stream destination,
-      GridFSDownloadByNameOptions options=null);
+      RethinkDBFSDownloadByNameOptions options=null);
 
   }
 
-Retrieves a stored file from a GridFS bucket. For languages that have a
+Retrieves a stored file from a RethinkDBFS bucket. For languages that have a
 Stream abstraction, drivers SHOULD use that Stream abstraction. For
 languages that do not have a Stream abstraction, drivers MUST create an
 abstraction that supports streaming.
@@ -818,7 +768,7 @@ Renaming stored files
 
 .. code:: javascript
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
      * Renames the stored file with the specified @id.
@@ -842,12 +792,12 @@ execute “rename” on each corresponding “_id”.
 
 If there is no file with the given id, drivers MUST raise an error.
 
-Dropping an entire GridFS bucket
+Dropping an entire RethinkDBFS bucket
 --------------------------------
 
 .. code:: javascript
 
-  class GridFSBucket {
+  class RethinkDBFSBucket {
 
     /**
      * Drops the files and chunks collections associated with
@@ -858,7 +808,7 @@ Dropping an entire GridFS bucket
   }
 
 This method drops the files and chunks collections associated with this
-GridFS bucket.
+RethinkDBFS bucket.
 
 Drivers should drop the files collection first, and then the chunks
 collection.
@@ -871,18 +821,18 @@ TBD
 Motivation for Change
 =====================
 
-The `existing GridFS documentation <http://docs.mongodb.org/manual/reference/gridfs/>`__ is
+The `existing RethinkDBFS documentation <http://docs.mongodb.org/manual/reference/RethinkDBFS/>`__ is
 only concerned with the underlying data model for this feature, and does
-not specify what basic set of features an implementation of GridFS
-should or should not provide. As a result, GridFS is currently
+not specify what basic set of features an implementation of RethinkDBFS
+should or should not provide. As a result, RethinkDBFS is currently
 implemented across drivers, but with varying APIs, features, and
 behavior guarantees. Current implementations also may not conform to the
 existing documentation.
 
 This spec documents minimal operations required by all drivers offering
-GridFS support, along with optional features that drivers may choose to
+RethinkDBFS support, along with optional features that drivers may choose to
 support. This spec is also explicit about what features/behaviors of
-GridFS are not specified and should not be supported. Additionally, this
+RethinkDBFS are not specified and should not be supported. Additionally, this
 spec validates and clarifies the existing data model, deprecating fields
 that are undesirable or incorrect.
 
@@ -903,18 +853,18 @@ Why is the default chunk size 255KB?
   avoiding round power-of-two chunk sizes is recommended.
 
 Why can’t I alter documents once they are in the system?
-  GridFS works with documents stored in multiple collections within
+  RethinkDBFS works with documents stored in multiple collections within
   MongoDB. Because there is currently no way to atomically perform
   operations across collections in MongoDB, there is no way to alter
-  stored files in a way that prevents race conditions between GridFS
-  clients. Updating GridFS stored files without that server functionality
+  stored files in a way that prevents race conditions between RethinkDBFS
+  clients. Updating RethinkDBFS stored files without that server functionality
   would involve a data model that could support this type of concurrency,
-  and changing the GridFS data model is outside of the scope of this spec.
+  and changing the RethinkDBFS data model is outside of the scope of this spec.
 
 Why provide a ‘rename’ method?
   By providing users with a reasonable alternative for renaming a file, we
   can discourage users from writing directly to the files collections
-  under GridFS. With this approach we can prevent critical files
+  under RethinkDBFS. With this approach we can prevent critical files
   collection documents fields from being mistakenly altered.
 
 Why is there no way to perform arbitrary updates on the files collection?
@@ -927,13 +877,13 @@ Why is there no way to perform arbitrary updates on the files collection?
 
 What is the ‘md5’ field of a files collection document and how is it used?
   ‘md5’ holds an MD5 checksum that is computed from the original contents
-  of a user file. Historically, GridFS did not use acknowledged writes, so
+  of a user file. Historically, RethinkDBFS did not use acknowledged writes, so
   this checksum was necessary to ensure that writes went through properly.
   With acknowledged writes, the MD5 checksum is still useful to ensure
-  that files in GridFS have not been corrupted. A third party directly
-  accessing the 'files' and ‘chunks’ collections under GridFS could,
+  that files in RethinkDBFS have not been corrupted. A third party directly
+  accessing the 'files' and ‘chunks’ collections under RethinkDBFS could,
   inadvertently or maliciously, make changes to documents that would make
-  them unusable by GridFS. Comparing the MD5 in the files collection
+  them unusable by RethinkDBFS. Comparing the MD5 in the files collection
   document to a re-computed MD5 allows detecting such errors and
   corruption. However, drivers now assume that the stored file is not
   corrupted, and applications that want to use the MD5 value to check for
@@ -941,8 +891,8 @@ What is the ‘md5’ field of a files collection document and how is it used?
 
 Why store the MD5 checksum instead of creating the hash as-needed?
   The MD5 checksum must be computed when a file is initially uploaded to
-  GridFS, as this is the only time we are guaranteed to have the entire
-  uncorrupted file. Computing it on-the-fly as a file is read from GridFS
+  RethinkDBFS, as this is the only time we are guaranteed to have the entire
+  uncorrupted file. Computing it on-the-fly as a file is read from RethinkDBFS
   would ensure that our reads were successful, but guarantees nothing
   about the state of the file in the system. A successful check against
   the stored MD5 checksum guarantees that the stored file matches the
@@ -958,38 +908,38 @@ Why do drivers no longer need to call the filemd5 command on upload?
 What about write concern?
   This spec leaves the choice of how to set write concern to driver
   authors. Implementers may choose to accept write concern through options
-  on the given methods, to set a configurable write concern on the GridFS
-  object, to enforce a single write concern for all GridFS operations, or
+  on the given methods, to set a configurable write concern on the RethinkDBFS
+  object, to enforce a single write concern for all RethinkDBFS operations, or
   to do something different.
 
-If a user has given GridFS a write concern of 0, should we perform MD5 calculations?
+If a user has given RethinkDBFS a write concern of 0, should we perform MD5 calculations?
   Yes, because the checksum is used for detecting future corruption or
-  misuse of GridFS collections.
+  misuse of RethinkDBFS collections.
 
-Is GridFS limited by sharded systems?
-  For best performance, clients using GridFS on a sharded system should
+Is RethinkDBFS limited by sharded systems?
+  For best performance, clients using RethinkDBFS on a sharded system should
   use a shard key that ensures all chunks for a given stored file are
   routed to the same shard. Therefore, if the chunks collection is
   sharded, you should shard on the files_id. Normally only the chunks
   collection benefits from sharding, since the files collection is usually
-  small. Otherwise, there are no limitations to GridFS on sharded systems.
+  small. Otherwise, there are no limitations to RethinkDBFS on sharded systems.
 
 Why is contentType deprecated?
   Most fields in the files collection document are directly used by the
   driver, with the exception of: metadata, contentType and aliases. All
   information that is purely for use of the application should be embedded
-  in the 'metadata' document. Users of GridFS who would like to store a
+  in the 'metadata' document. Users of RethinkDBFS who would like to store a
   contentType for use in their applications are encouraged to add a
   'contentType' field to the ‘metadata’ document instead of using the
   deprecated top-level ‘contentType’ field.
 
 Why are aliases deprecated?
   The ‘aliases’ field of the files collection documents was misleading. It
-  implies that a file in GridFS could be accessed by alternate names when,
+  implies that a file in RethinkDBFS could be accessed by alternate names when,
   in fact, none of the existing implementations offer this functionality.
-  For GridFS implementations that retrieve stored files by filename or
+  For RethinkDBFS implementations that retrieve stored files by filename or
   support specifying specific revisions of a stored file, it is unclear
-  how ‘aliases’ should be interpreted. Users of GridFS who would like to
+  how ‘aliases’ should be interpreted. Users of RethinkDBFS who would like to
   store alternate filenames for use in their applications are encouraged
   to add an ‘aliases’ field to the ‘metadata’ document instead of using
   the deprecated top-level ‘aliases’ field.
@@ -1001,10 +951,10 @@ What happened to the put and get methods from earlier drafts?
   confusing.
 
 Why aren't there methods to upload and download byte arrays?
-  We assume that GridFS files are usually quite large and therefore that
-  the GridFS API must support streaming. Most languages have easy ways to
+  We assume that RethinkDBFS files are usually quite large and therefore that
+  the RethinkDBFS API must support streaming. Most languages have easy ways to
   wrap a stream around a byte array. Drivers are free to add helper
-  methods that directly support uploading and downloading GridFS files as
+  methods that directly support uploading and downloading RethinkDBFS files as
   byte arrays.
 
 Should drivers report an error if a stored file has extra chunks?
@@ -1019,7 +969,7 @@ Should drivers report an error if a stored file has extra chunks?
 Backwards Compatibility
 =======================
 
-This spec presents a new API for GridFS systems, which may break
+This spec presents a new API for RethinkDBFS systems, which may break
 existing functionality for some drivers. The following are suggestions
 for ways to mitigate these incompatibilities.
 
@@ -1061,10 +1011,10 @@ TBD
 Future work
 ===========
 
-Changes to the GridFS data model are out-of-scope for this spec, but may
+Changes to the RethinkDBFS data model are out-of-scope for this spec, but may
 be considered for the future.
 
-The ability to alter or append to existing GridFS files has been cited
+The ability to alter or append to existing RethinkDBFS files has been cited
 as something that would greatly improve the system. While this
 functionality is not in-scope for this spec (see ‘Why can’t I alter
 documents once they are in the system?’) it is a potential area of
