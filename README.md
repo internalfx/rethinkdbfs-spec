@@ -61,6 +61,7 @@ A document stored in the files table that contains information about a single st
   "uploadDate" : "<Time>",
   "sha256" : "<String>",
   "filename" : "<String>",
+  "status" : "<String>",
   "metadata" : "<Object>"
 }
 ```
@@ -69,10 +70,11 @@ A document stored in the files table that contains information about a single st
 |---|---|
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
-| chunkSize | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
+| chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
 | uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
+| status | Status may be "Complete" or "Incomplete". |
 | metadata | any additional application data the user wishes to store. |
 
 #### Orphaned chunk
@@ -268,14 +270,16 @@ While streaming the user file, drivers compute an SHA256 digest. This SHA256 dig
 
 After storing all chunk documents generated for the user file in the `chunks` table, drivers create a files table document for the file and store it in the files table. The fields in the files table document are set as follows:
 
-|Key|Description|
+| Key | Description |
 |---|---|
-|length|the length of this stored file, in bytes.|
-|chunkSize|the chunk size in bytes used to break the user file into chunks. While the configuration option is named ‘chunkSizeBytes’ for clarity, for legacy reasons, the files table document uses only ‘chunkSize’.|
-|uploadDate|a BSON datetime object for the current time, in UTC, when the files table document was created.|
-|sha256|SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase).|
-|filename|the filename passed to this function, UTF-8 encoded.|
-|metadata|the `metadata` document passed in the options, if provided; otherwise omitted.|
+| id | a unique ID for this document. |
+| length | the length of this stored file, in bytes. |
+| chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
+| uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
+| filename | the name of this stored file; this does not need to be unique. |
+| status | Status may be "Complete" or "Incomplete". |
+| metadata | any additional application data the user wishes to store. |
 
 If a user file contains no data, drivers MUST still create a files table document for it with length set to zero. Drivers MUST NOT create any empty chunks for this file.
 
