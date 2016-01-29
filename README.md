@@ -162,16 +162,6 @@ class RethinkDBFSBucketOptions {
    */
   chunkSizeBytes : Int32 optional;
 
-  /**
-   * The write concern. Defaults to the write concern of the database.
-   */
-  writeConcern : WriteConcern optional;
-
-  /**
-   * The read preference. Defaults to the read preference of the database.
-   */
-  readPreference : ReadPreference optional;
-
 }
 
 class RethinkDBFSBucket {
