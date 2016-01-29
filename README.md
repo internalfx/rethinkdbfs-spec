@@ -236,7 +236,7 @@ configurable:
 
 - **bucketName:** the name of this RethinkDBFS bucket. The files and chunks
   collection for this RethinkDBFS bucket are prefixed by this name
-  followed by a dot. Defaults to “fs”. This allows multiple RethinkDBFS
+  followed by an underscore. Defaults to “fs”. This allows multiple RethinkDBFS
   buckets, each with a unique name, to exist within the same
   database.
 
