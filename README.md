@@ -71,8 +71,6 @@ A document stored in the files collection that contains information about a sing
   "uploadDate" : <DateTime>,
   "md5" : <hex string>,
   "filename" : <string>,
-  "contentType" : <string>,
-  "aliases" : <string array>,
   "metadata" : <Document>
 }
 ```
