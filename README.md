@@ -193,7 +193,7 @@ Immediately before the **first** write operation on an instance of a RethinkDBFS
 - determine if the files table is empty.
 - and if so, create the indexes described above if they do not already exist
 
-To determine whether the files table is empty drivers SHOULD execute the equivalent of the following shell command:
+To determine whether the files table is empty drivers SHOULD execute the following query:
 
 ```javascript
 r.table('<bucketName>_files').limit(1)
