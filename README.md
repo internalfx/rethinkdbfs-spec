@@ -424,7 +424,7 @@ as follows:
 |n|this is the Nth section of the stored file, zero based.|
 |data|a section of file data, stored as JSON binary data with subtype. All chunks except the last one must be exactly `chunkSizeBytes` long. The last chunk can be smaller, and should only be as large as necessary.|
 
-While streaming the user file, drivers compute an MD5 digest. This MD5 digest will later be stored in the files collection document.
+While streaming the user file, drivers compute an SHA256 digest. This SHA256 digest will later be stored in the files collection document.
 
 After storing all chunk documents generated for the user file in the
 ‘chunks’ collection, drivers create a files collection document for the
