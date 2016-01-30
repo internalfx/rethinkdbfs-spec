@@ -76,7 +76,7 @@ A document stored in the files table that contains information about a single st
 | startedAt | the date and time this file upload was started to RethinkDBFS. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
-| status | Status may be "Complete" or "Incomplete". |
+| status | Status may be "Complete" or "Incomplete" or "Deleted". |
 | metadata | any additional application data the user wishes to store. |
 
 #### Orphaned chunk
