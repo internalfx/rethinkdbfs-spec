@@ -175,7 +175,7 @@ For efficient execution of various RethinkDBFS operations the following indexes 
 An index on the `files` table:
 
 ```javascript
-r.table('<bucketName>_files').createIndex('status_filename_createdat', [r.row('status'), r.row('filename'), r.row('createdAt')])
+r.table('<bucketName>_files').createIndex('status_filename_createdat', [r.row('status'), r.row('filename'), r.row('finishedAt')])
 ```
 
 An index on the `chunks` table:
