@@ -276,8 +276,6 @@ After storing all chunk documents generated for the user file in the `chunks` ta
 
 If a user file contains no data, drivers MUST still create a files table document for it with length set to zero. Drivers MUST NOT create any empty chunks for this file.
 
-Note that drivers are no longer required to run the 'filemd5' to confirm that all chunks were successfully uploaded. We assume that if none of the inserts failed then the chunks must have been successfully inserted, and running the 'filemd5' command would just be unnecessary overhead.
-
 #### Operation Failure
 
 If any of the above operations fail against the server, drivers MUST raise an error. If some inserts succeeded before the failed operation, these become orphaned chunks. Drivers MUST NOT attempt to clean up these orphaned chunks. The rationale is that whatever failure caused the orphan chunks will most likely also prevent cleaning up the orphaned chunks, and any attempts to clean up the orphaned chunks will simply cause long delays before reporting the original failure to the application.
