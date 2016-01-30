@@ -58,7 +58,7 @@ A document stored in the files table that contains information about a single st
   "id" : "<String>",
   "length" : "<Number>",
   "chunkSize" : "<Number>",
-  "uploadDate" : "<Time>",
+  "createdAt" : "<Time>",
   "sha256" : "<String>",
   "filename" : "<String>",
   "status" : "<String>",
@@ -71,7 +71,7 @@ A document stored in the files table that contains information about a single st
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
 | chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
-| uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| createdAt | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | status | Status may be "Complete" or "Incomplete". |
@@ -239,7 +239,7 @@ In the case of `upload_from_stream`, the driver reads the contents of the user f
 
 Drivers MUST take an `options` document with configurable parameters. Drivers for dynamic languages MUST ignore any unrecognized fields in the options for this method (this does not apply to drivers for static languages which define an Options class that by definition only contains valid fields).
 
-Note that in RethinkDBFS, `filename` is not a unique identifier. There may be many stored files with the same filename stored in a RethinkDBFS bucket under different ids. Multiple stored files with the same filename are called `revisions`, and the `uploadDate` is used to distinguish newer revisions from older ones.
+Note that in RethinkDBFS, `filename` is not a unique identifier. There may be many stored files with the same filename stored in a RethinkDBFS bucket under different ids. Multiple stored files with the same filename are called `revisions`, and the `createdAt` is used to distinguish newer revisions from older ones.
 
 #### Implementation details:
 
@@ -262,7 +262,7 @@ After storing all chunk documents generated for the user file in the `chunks` ta
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
 | chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
-| uploadDate | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| createdAt | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | status | Status may be "Complete" or "Incomplete". |
@@ -412,7 +412,7 @@ Drivers MUST document how users query files table documents, including how to qu
 class RethinkDBFSDownloadByNameOptions {
 
   /**
-   * Which revision (documents with the same filename and different uploadDate)
+   * Which revision (documents with the same filename and different createdAt)
    * of the file to retrieve. Defaults to -1 (the most recent revision).
    *
    * Revision numbers are defined as follows:
@@ -445,7 +445,7 @@ Retrieves a stored file from a RethinkDBFS bucket. For languages that have a Str
 
 If there is no file with the given filename, or if the requested revision does not exist, drivers MUST raise an error with a distinct message for each case.
 
-Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by uploadDate (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to skip equals the revision number.
+Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by createdAt (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to skip equals the revision number.
 
 If a networking error or server error occurs, drivers MUST raise an error.
 
