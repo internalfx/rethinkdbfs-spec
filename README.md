@@ -192,7 +192,7 @@ Drivers MUST provide an `initBucket` method, which creates all necessary tables 
 
 Drivers MUST check whether the tables and indexes already exist before attempting to create them.
 
-If a driver determines that it should create the tables and indexes, it MUST raise an error if the attempt to create the them fails.
+If a driver determines that it should create the tables and indexes, it MUST raise an error if the attempt to create them fails.
 
 Drivers MUST wait for the indexes to finish building before writing.
 
