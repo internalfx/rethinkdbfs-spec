@@ -171,13 +171,13 @@ For efficient execution of various RethinkDBFS operations the following indexes 
 An index on the `files` table:
 
 ```javascript
-r.table('<bucketName>_files').createIndex('<indexName>', [r.row('status'), r.row('filename'), r.row('uploadDate')])
+r.table('<bucketName>_files').createIndex('status_filename_createdat', [r.row('status'), r.row('filename'), r.row('createdAt')])
 ```
 
 An index on the `chunks` table:
 
 ```javascript
-r.table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n')])
+r.table('<bucketName>_chunks').createIndex('filesid_n', [r.row('files_id'), r.row('n')])
 ```
 
 RethinkDB does not automatically create tables, nor does it automatically use indexes. RethinkDBFS requires tables and indexes to be explicitly created before first use.
@@ -318,6 +318,12 @@ Note: if a file in a RethinkDBFS bucket was added by a legacy implementation, it
 #### Implementation details:
 
 Drivers must first retrieve the files table document for this file. If there is no files table document, the file either never existed, is in the process of being deleted, or has been corrupted, and the driver MUST raise an error.
+
+The recommended query for retrieving the files table document is as follows:
+
+```javascript
+r.table('fs_files').between(['Completed', '<filename>', r.minval], ['Completed', '<filename>', r.maxval], {index: 'status_filename_createdat'}).orderBy({index: r.desc('status_filename_createdat')})
+```
 
 Then, implementers retrieve all chunks with files_id equal to id, sorted in ascending order on “n”.
 
