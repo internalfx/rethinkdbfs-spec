@@ -180,34 +180,21 @@ An index on the `chunks` table:
 r.table('<bucketName>_chunks').createIndex('<indexName>', [r.row('files_id'), r.row('n')])
 ```
 
-Normally we leave it up to the user to create whatever indexes they see fit, but because RethinkDBFS is likely to be looked at as a black box we should create these indexes automatically in a way that involves the least amount of overhead possible.
+RethinkDB does not automatically create tables, nor does it automatically use indexes. RethinkDBFS requires tables and indexes to be explicitly created before first use.
 
-#### Before read operations
+#### Initialization
 
-For read operations, drivers MUST assume that the proper indexes exist.
+Drivers MUST provide an `initBucket` method, which creates all necessary tables and indexes.
 
-#### Before write operations
+Drivers MUST check whether the tables and indexes already exist before attempting to create them.
 
-Immediately before the **first** write operation on an instance of a RethinkDBFSBucket class is attempted (and not earlier), drivers MUST:
+If a driver determines that it should create the tables and indexes, it MUST raise an error if the attempt to create the them fails.
 
-- determine if the files table is empty.
-- and if so, create the indexes described above if they do not already exist
+Drivers MUST wait for the indexes to finish building before writing.
 
-To determine whether the files table is empty drivers SHOULD execute the following query:
+#### Before read/write operations
 
-```javascript
-r.table('<bucketName>_files').limit(1)
-```
-
-If no document is returned the files table is empty.
-
-This method of determining whether the files table is empty should perform better than checking the count in the case where the files table is sharded.
-
-Drivers MUST check whether the indexes already exist before attempting to create them. This supports the scenario where an application is running with read-only authorizations.
-
-If a driver determines that it should create the indexes, it MUST raise an error if the attempt to create the indexes fails.
-
-Drivers MUST wait for the index to finish building before writing.
+Drivers MUST assume that the proper tables and indexes exist.
 
 # File Upload
 
