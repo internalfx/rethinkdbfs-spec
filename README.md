@@ -59,6 +59,7 @@ A document stored in the files table that contains information about a single st
   "length" : "<Number>",
   "chunkSize" : "<Number>",
   "createdAt" : "<Time>",
+  "startedAt" : "<Time>",
   "sha256" : "<String>",
   "filename" : "<String>",
   "status" : "<String>",
@@ -72,6 +73,7 @@ A document stored in the files table that contains information about a single st
 | length | the length of this stored file, in bytes. |
 | chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
 | createdAt | the date and time this file was added to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| startedAt | the date and time this file upload was started to RethinkDBFS. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | status | Status may be "Complete" or "Incomplete". |
