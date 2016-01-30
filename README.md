@@ -58,9 +58,9 @@ A document stored in the files table that contains information about a single st
   "id" : "<String>",
   "length" : "<Number>",
   "chunkSize" : "<Number>",
-  "completeDate" : "<Time>",
-  "incompleteDate" : "<Time>",
-  "deletedDate" : "<Time>",
+  "finishedAt" : "<Time>",
+  "startedAt" : "<Time>",
+  "deletedAt" : "<Time>",
   "sha256" : "<String>",
   "filename" : "<String>",
   "status" : "<String>",
@@ -73,9 +73,9 @@ A document stored in the files table that contains information about a single st
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
 | chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
-| completeDate | the date and time this files status was set to `Complete`. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
-| incompleteDate | the date and time this files status was set to `Incomplete`. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
-| deletedDate | the date and time this files status was set to `Deleted`. The value of this field MUST be the datetime when file was marked `Deleted`. |
+| finishedAt | the date and time this file finished writing to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| startedAt | the date and time this file started writing to RethinkDBFS. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
+| deletedAt | the date and time this files status was set to `Deleted`. The value of this field MUST be the datetime when file was marked `Deleted`. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | status | Status may be "Complete" or "Incomplete" or "Deleted". |
@@ -266,9 +266,9 @@ After storing all chunk documents generated for the user file in the `chunks` ta
 | id | a unique ID for this document. |
 | length | the length of this stored file, in bytes. |
 | chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
-| completeDate | the date and time this files status was set to `Complete`. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
-| incompleteDate | the date and time this files status was set to `Incomplete`. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
-| deletedDate | the date and time this files status was set to `Deleted`. The value of this field MUST be the datetime when file was marked `Deleted`. |
+| finishedAt | the date and time this file finished writing to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
+| startedAt | the date and time this file started writing to RethinkDBFS. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
+| deletedAt | the date and time this files status was set to `Deleted`. The value of this field MUST be the datetime when file was marked `Deleted`. |
 | sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
 | filename | the name of this stored file; this does not need to be unique. |
 | status | Status may be "Complete" or "Incomplete" or "Deleted". |
