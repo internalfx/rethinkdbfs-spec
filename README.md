@@ -4,8 +4,8 @@ This is the official spec for the [RethinkDBFS](https://github.com/internalfx/re
 
 The purpose of this document is to adapt GridFS specifically for RethinkDB and allow compatibile drivers to be written in other languages.
 
-- Authors **Bryan Morris**, **Brian Chavez**
-- Advisors **Daniel Mewes**
+- Authors [**Bryan Morris**](https://github.com/internalfx), [**Brian Chavez**](https://github.com/bchavez)
+- Advisors [**Daniel Mewes**](https://github.com/danielmewes)
 
 # Abstract
 
