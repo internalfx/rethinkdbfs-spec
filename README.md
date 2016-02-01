@@ -249,7 +249,19 @@ Note that in RethinkDBFS, `filename` is not a unique identifier. There may be ma
 
 If `chunkSizeBytes` is set through the options, that value MUST be used as the chunk size for this stored file. If this parameter is not specified, the default chunkSizeBytes setting for this RethinkDBFSBucket object MUST be used instead.
 
-To store a user file, drivers first generate an ObjectId to act as its id. Then, drivers store the contents of the user file in the chunks table by breaking up the contents into chunks of size `chunkSizeBytes`. For a non-empty user file, for each Nth section of the file, drivers create a chunk document and set its fields as follows:
+To store a user file, drivers first write a partial files table document to the files table. The fields in the files table document are set as follows:
+
+```javascript
+  r.table('<filesTable>').insert({
+    filename: '<filename>',
+    chunkSizeBytes: '<chunkSizeBytes>',
+    startedAt: new Date(),
+    status: 'Incomplete',
+    metadata: '<metaData>'
+  })
+```
+
+Then, drivers store the contents of the user file in the chunks table by breaking up the contents into chunks of size `chunkSizeBytes`. For a non-empty user file, for each Nth section of the file, drivers create a chunk document and set its fields as follows:
 
 |Key|Description|
 |---|---|
@@ -259,20 +271,16 @@ To store a user file, drivers first generate an ObjectId to act as its id. Then,
 
 While streaming the user file, drivers compute an SHA256 digest. This SHA256 digest will later be stored in the files table document.
 
-After storing all chunk documents generated for the user file in the `chunks` table, drivers create a files table document for the file and store it in the files table. The fields in the files table document are set as follows:
+After storing all chunk documents generated for the user file in the `chunks` table, drivers update the files table document. The fields in the files table document are set as follows:
 
-| Key | Description |
-|---|---|
-| id | a unique ID for this document. |
-| length | the length of this stored file, in bytes. |
-| chunkSizeBytes | the size, in bytes, of each data chunk of this file. This value is configurable by file. The default is 255KB (1024 * 255). |
-| finishedAt | the date and time this file finished writing to RethinkDBFS. The value of this field MUST be the datetime when the upload completed, not the datetime when it was begun. |
-| startedAt | the date and time this file started writing to RethinkDBFS. The value of this field MUST be the datetime when the upload started, not the datetime when it was finished. |
-| deletedAt | the date and time this files status was set to `Deleted`. The value of this field MUST be the datetime when file was marked `Deleted`. |
-| sha256 | SHA256 checksum for this user file, computed from the file’s data, stored as a hex string (lowercase). |
-| filename | the name of this stored file; this does not need to be unique. |
-| status | Status may be "Complete" or "Incomplete" or "Deleted". |
-| metadata | any additional application data the user wishes to store. |
+```javascript
+  r.table('<filesTable>').get('<file_id>').update({
+    finishedAt: new Date(),
+    length: '<BytesWritten>',
+    status: 'Complete',
+    sha256: '<sha256Hash>'
+  })
+```
 
 If a user file contains no data, drivers MUST still create a files table document for it with length set to zero. Drivers MUST NOT create any empty chunks for this file.
 
