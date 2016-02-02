@@ -304,18 +304,11 @@ Abort MUST also close the Stream, or at least place it in an aborted state, so a
 class RethinkDBFSBucket {
 
   /** Opens a Stream from which the application can read the contents of the stored file
-   * specified by @id.
+   * specified by filename.
    *
    * Returns a Stream.
    */
-  Stream open_download_stream(ObjectId id);
-
-  /**
-   * Downloads the contents of the stored file specified by @id and writes
-   * the contents to the @destination Stream.
-   */
-  void download_to_stream(ObjectId id, Stream destination);
-
+  Stream createReadStream(filename);
 }
 ```
 
@@ -334,7 +327,7 @@ Drivers must first retrieve the files table document for this file. If there is 
 The recommended query for retrieving the files table document is as follows:
 
 ```javascript
-r.table('fs_files').between(['Completed', '<filename>', r.minval], ['Completed', '<filename>', r.maxval], {index: 'status_filename_createdat'}).orderBy({index: r.desc('status_filename_createdat')})
+r.table('fs_files').between(['Completed', '<filename>', r.minval], ['Completed', '<filename>', r.maxval], {index: 'status_filename_finishedat'}).orderBy({index: r.desc('status_filename_finishedat')})
 ```
 
 Then, implementers retrieve all chunks with files_id equal to id, sorted in ascending order on “n”.
