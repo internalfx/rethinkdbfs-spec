@@ -57,7 +57,7 @@ A document stored in the files table that contains information about a single st
 {
   "id" : "<String>",
   "length" : "<Number>",
-  "chunkSize" : "<Number>",
+  "chunkSizeBytes" : "<Number>",
   "finishedAt" : "<Time>",
   "startedAt" : "<Time>",
   "deletedAt" : "<Time>",
@@ -247,7 +247,7 @@ Note that in RethinkDBFS, `filename` is not a unique identifier. There may be ma
 
 #### Implementation details:
 
-If `chunkSizeBytes` is set through the options, that value MUST be used as the chunk size for this stored file. If this parameter is not specified, the default chunkSizeBytes setting for this RethinkDBFSBucket object MUST be used instead.
+If `chunkSizeBytes` is set through the options, that value MUST be used as the chunk size for this stored file. If this parameter is not specified, the default `chunkSizeBytes` setting for this RethinkDBFSBucket object MUST be used instead.
 
 To store a user file, drivers first write a partial files table document to the files table. The fields in the files table document are set as follows:
 
@@ -298,7 +298,7 @@ Abort MUST raise an error if it is unable to succesfully abort the upload (for e
 
 Abort MUST also close the Stream, or at least place it in an aborted state, so any further attempts to write additional content to the Stream after Abort has been called fail immediately.
 
-# File Download
+# File Download By ID
 
 ```javascript
 class RethinkDBFSBucket {
@@ -308,7 +308,7 @@ class RethinkDBFSBucket {
    *
    * Returns a Stream.
    */
-  Stream createReadStream(filename);
+  Stream createReadStreamById(file_id);
 }
 ```
 
@@ -323,12 +323,6 @@ Note: if a file in a RethinkDBFS bucket was added by a legacy implementation, it
 #### Implementation details:
 
 Drivers must first retrieve the files table document for this file. If there is no files table document, the file either never existed, is in the process of being deleted, or has been corrupted, and the driver MUST raise an error.
-
-The recommended query for retrieving the files table document is as follows:
-
-```javascript
-r.table('fs_files').between(['Completed', '<filename>', r.minval], ['Completed', '<filename>', r.maxval], {index: 'status_filename_finishedat'}).orderBy({index: r.desc('status_filename_finishedat')})
-```
 
 Then, implementers retrieve all chunks with files_id equal to id, sorted in ascending order on “n”.
 
@@ -411,7 +405,7 @@ Drivers MUST document how users query files table documents, including how to qu
 
 # Advanced API
 
-## File Download by Filename
+# File Download by Filename
 
 ```javascript
 class RethinkDBFSDownloadByNameOptions {
@@ -439,7 +433,7 @@ class RethinkDBFSBucket {
    *
    * Returns a Stream.
    */
-  Stream createReadStream(string filename, RethinkDBFSDownloadByNameOptions=null);
+  Stream createReadStreamByFilename(string filename, RethinkDBFSDownloadByNameOptions=null);
 
 }
 ```
@@ -450,7 +444,13 @@ Retrieves a stored file from a RethinkDBFS bucket. For languages that have a Str
 
 If there is no file with the given filename, or if the requested revision does not exist, drivers MUST raise an error with a distinct message for each case.
 
-Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by createdAt (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to skip equals the revision number.
+The recommended query for retrieving the files table document is as follows:
+
+```javascript
+r.table('fs_files').between(['Completed', '<filename>', r.minval], ['Completed', '<filename>', r.maxval], {index: 'status_filename_finishedat'}).orderBy({index: r.desc('status_filename_finishedat')})
+```
+
+Drivers MUST select the files table document of the file to-be-returned by running a query on the files table for the given filename, sorted by `finishedAt` (either ascending or descending, depending on the revision requested) and skipping the appropriate number of documents. For negative revision numbers, the sort is descending and the number of documents to skip equals (-revision - 1). For non-negative revision numbers, the sort is ascending and the number of documents to skip equals the revision number.
 
 If a networking error or server error occurs, drivers MUST raise an error.
 
@@ -462,7 +462,7 @@ In the case of download_to_stream, drivers are not required to support partial f
 
 If either ‘start’ or ‘end’ is invalid, drivers MUST raise an error. These values are considered invalid if they are negative, greater than the file length, or if ‘start’ is greater than ‘end’.
 
-When performing partial reads, drivers SHOULD use the file’s ‘chunkSize’ to calculate which chunks contain the desired section and avoid reading unneeded documents from the ‘chunks’ table.
+When performing partial reads, drivers SHOULD use the file’s `chunkSizeBytes` to calculate which chunks contain the desired section and avoid reading unneeded documents from the ‘chunks’ table.
 
 ## Renaming stored files
 
@@ -544,7 +544,7 @@ Upload and download are more idiomatic names that more clearly indicate their pu
 We assume that RethinkDBFS files are usually quite large and therefore that the RethinkDBFS API must support streaming. Most languages have easy ways to wrap a stream around a byte array. Drivers are free to add helper methods that directly support uploading and downloading RethinkDBFS files as byte arrays.
 
 #### Should drivers report an error if a stored file has extra chunks?
-The length and the chunkSize fields of the files table document together imply exactly how many chunks a stored file should have. If the chunks table has any extra chunks the stored file is in an inconsistent state. Ideally we would like to report that as an error, but this is an extremely unlikely state and we don't want to pay a performance penalty checking for an error that is almost never there. Therefore, drivers MAY ignore extra chunks.
+The length and the `chunkSizeBytes` fields of the files table document together imply exactly how many chunks a stored file should have. If the chunks table has any extra chunks the stored file is in an inconsistent state. Ideally we would like to report that as an error, but this is an extremely unlikely state and we don't want to pay a performance penalty checking for an error that is almost never there. Therefore, drivers MAY ignore extra chunks.
 
 # Future work
 
