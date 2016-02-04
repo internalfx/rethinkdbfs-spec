@@ -1,8 +1,12 @@
 # RethinkDBFS Spec
 
-**This repo has moved and been rebuilt from scratch**
+----
+
+## This repo has moved and been rebuilt from scratch
 
 Please visit the [ReGrid Spec](https://github.com/internalfx/regrid-spec)
+
+----
 
 This is the official spec for the [RethinkDBFS](https://github.com/internalfx/rethinkdbfs) Nodejs library. Copied and adapted from the original [GridFS spec](https://github.com/mongodb/specifications) for MongoDB.
 
